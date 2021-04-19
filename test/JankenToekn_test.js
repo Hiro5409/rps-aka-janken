@@ -64,3 +64,23 @@ contract("JankenToken", accounts => {
     });
   });
 });
+
+contract("Deployed JankenToken", accounts => {
+  it("it has been deployed", async () => {
+    const jankenToken = await JankenTokenContract.deployed();
+    assert(jankenToken, "JankenToken was not deployed");;
+  });
+
+  it("host and guest has 100 jkt", async () => {
+    const jankenToken = await JankenTokenContract.deployed();
+    const master = accounts[0];
+    const host = accounts[1];
+    const guest = accounts[2];
+
+    const hostBalance = (await jankenToken.balanceOf(host)).toNumber();
+    const guestBalance = (await jankenToken.balanceOf(guest)).toNumber();
+    const expected = 100;
+    assert.equal(hostBalance, expected, "host should have 100 JKT");;
+    assert.equal(guestBalance, expected, "guest should have 100 JKT");;
+  })
+});
