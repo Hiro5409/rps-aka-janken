@@ -73,7 +73,6 @@ contract("Deployed JankenToken", accounts => {
 
   it("host and guest has 100 jkt", async () => {
     const jankenToken = await JankenTokenContract.deployed();
-    const master = accounts[0];
     const host = accounts[1];
     const guest = accounts[2];
 
