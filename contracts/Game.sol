@@ -2,9 +2,10 @@
 
 pragma solidity 0.6.8;
 
-contract Game {
+import "./GameStatus.sol";
+
+contract Game is GameStatus {
     enum Hand {Rock, Paper, Scissors}
-    enum Status {Created, Ready, Canceled, TimedOut, Done}
     // TODO: Change minimum BetAmount
     uint256 public constant BET_AMOUNT = 5;
 
@@ -15,8 +16,6 @@ contract Game {
     Hand hostHand;
     Hand guestHand;
 
-    Status status = Status.Created;
-
     bytes32 public hostSalt;
 
     constructor(address _hostAddress, bytes32 _hostHandHashed) public {
@@ -24,21 +23,23 @@ contract Game {
         hostHandHashed = _hostHandHashed;
     }
 
-    function join(address _guestAddress, Hand _guestHand) external {
-        require(
-            status == Status.Created,
-            "status is invalid, required Created"
-        );
+    function join(address _guestAddress, Hand _guestHand)
+        external
+        isStatusCreated
+    {
         require(msg.sender != hostAddress, "host of this game cannot join");
+
         // approveTransferの確認
 
         guestAddress = _guestAddress;
         guestHand = _guestHand;
-        status = Status.Ready;
+        setStatusReady();
     }
 
-    function revealHostHand(Hand _hostHand, bytes32 _hostSalt) external {
-        require(status == Status.Ready, "status is invalid, required Ready");
+    function revealHostHand(Hand _hostHand, bytes32 _hostSalt)
+        external
+        isStatusReady
+    {
         require(msg.sender == hostAddress, "only host can reveal");
 
         if (
@@ -65,6 +66,6 @@ contract Game {
         } else if (hostHand == Hand.Scissors && guestHand == Hand.Paper) {
             winnerAddress = hostAddress;
         }
-        status = Status.Done;
+        setStatusDone();
     }
 }
