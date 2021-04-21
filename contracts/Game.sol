@@ -18,6 +18,22 @@ contract Game is GameStatus {
 
     bytes32 public hostSalt;
 
+    modifier isNotHost() {
+        require(
+            msg.sender != hostAddress,
+            "host of this game is not authorized"
+        );
+        _;
+    }
+
+    modifier isHost() {
+        require(
+            msg.sender == hostAddress,
+            "only host of this game is authorized"
+        );
+        _;
+    }
+
     constructor(address _hostAddress, bytes32 _hostHandHashed) public {
         hostAddress = _hostAddress;
         hostHandHashed = _hostHandHashed;
@@ -26,9 +42,8 @@ contract Game is GameStatus {
     function join(address _guestAddress, Hand _guestHand)
         external
         isStatusCreated
+        isNotHost
     {
-        require(msg.sender != hostAddress, "host of this game cannot join");
-
         // approveTransferの確認
 
         guestAddress = _guestAddress;
@@ -39,9 +54,8 @@ contract Game is GameStatus {
     function revealHostHand(Hand _hostHand, bytes32 _hostSalt)
         external
         isStatusReady
+        isHost
     {
-        require(msg.sender == hostAddress, "only host can reveal");
-
         if (
             keccak256(abi.encodePacked(_hostHand, _hostSalt)) == hostHandHashed
         ) {
