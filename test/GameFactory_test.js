@@ -25,20 +25,67 @@ contract("GameFactory", accounts => {
     Done: 4,
   };
 
+  let factory;
+  let game;
+  const salt = web3.utils.toHex('Thank you.');
+  const hostHand = Hand.Rock;
+  beforeEach(async ()=>{
+    factory = await GameFactoryContract.deployed();
+    const hostHandHashed = web3.utils.soliditySha3(
+      {
+        type: 'uint8',
+        value: hostHand,
+      },
+      {
+        type: 'bytes32',
+        value: salt,
+      }
+    );
+    await factory.createGame(hostHandHashed, { from: host });
+    const games = await factory.games();
+    game = await GameContract.at(games[0]);
+  });
 
   describe("create game", () => {
-    let factory;
-    beforeEach(async ()=>{
-      factory = await GameFactoryContract.deployed();
-      const hostHand = Hand.Rock;
-      const salt = 'Thank you';
-      await factory.createGame(host, web3.utils.soliditySha3(hostHand, salt));
+    it("create a new game by host", async () => {
+      const hostAddress = await game.hostAddress()
+      assert.equal(hostAddress, host, "address should be equal to host");
+    });
+  });
+
+  describe("join game", () => {
+    it("throws an error when called by host", async () => {
+      try {
+        await game.join(Hand.Paper, { from: host });
+        assert.fail("host cannot join");
+      } catch (e) {
+        const expected = "host of this game is not authorized";
+        const actual = e.reason;
+        assert.equal(actual, expected, "should not be permitted");
+      }
     });
 
-    it("create a new game by host", async () => {
-      const games = await factory.games();
-      const game = await GameContract.at(games[0]);
-      assert.equal(await game.hostAddress(), host, "address should be equal to host");
+    it("join the game by guest", async () => {
+      await game.join(Hand.Paper, { from: guest });
+      const expected = Hand.Paper;
+      const actual = await game.guestHand();
+      assert.equal(actual, expected, "hand should be same");
+    });
+
+    it("throws an error when status is not Created", async () => {
+      const status = await game.status();
+      assert.equal(status, Status.Ready, "status should be Ready");
+      try {
+        await game.join(Hand.Rock, { from: guest });
+        assert.fail("cannot join when status is not Created");
+      } catch (e) {
+        const expected = "status is invalid, required Created";
+        const actual = e.reason;
+        assert.equal(actual, expected, "should not be permitted");
+      }
+    });
+  });
+
     });
   });
 });
