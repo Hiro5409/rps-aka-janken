@@ -13,11 +13,18 @@ contract("GameFactory", accounts => {
   const host = accounts[1];
   const guest = accounts[2];
   const Hand = {
-    None: 0,
-    Rock: 1,
-    Paper: 2,
-    Scissors: 3
+    Rock: 0,
+    Paper: 1,
+    Scissors: 2,
   };
+  const Status = {
+    Created: 0,
+    Ready: 1,
+    Canceled: 2,
+    TimedOut: 3,
+    Done: 4,
+  };
+
 
   describe("create game", () => {
     let factory;
