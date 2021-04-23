@@ -34,6 +34,14 @@ contract Game is GameStatus {
         _;
     }
 
+    modifier isValidHand(Hand _hostHand, bytes32 _hostSalt) {
+        require(
+            keccak256(abi.encodePacked(_hostHand, _hostSalt)) == hostHandHashed,
+            "cannot change hand or salt later out"
+        );
+        _;
+    }
+
     constructor(address _hostAddress, bytes32 _hostHandHashed) public {
         hostAddress = _hostAddress;
         hostHandHashed = _hostHandHashed;
@@ -49,13 +57,8 @@ contract Game is GameStatus {
         external
         isStatusReady
         isHost
+        isValidHand(_hostHand, _hostSalt)
     {
-        if (
-            keccak256(abi.encodePacked(_hostHand, _hostSalt)) == hostHandHashed
-        ) {
-            hostHand = _hostHand;
-            judge();
-        }
     }
 
     function judge() private {
