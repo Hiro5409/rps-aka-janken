@@ -9,10 +9,10 @@ contract GameFactory {
 
     event GameCreated(address indexed game, address indexed host);
 
-    function createGame(address _hostAddress, bytes32 _hostHandHashed) public {
-        Game game = new Game(_hostAddress, _hostHandHashed);
+    function createGame(bytes32 _hostHandHashed) public {
+        Game game = new Game(msg.sender, _hostHandHashed);
         _games.push(address(game));
-        emit GameCreated(address(game), _hostAddress);
+        emit GameCreated(address(game), msg.sender);
     }
 
     function games() public view returns (address[] memory collection) {

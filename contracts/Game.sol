@@ -39,14 +39,8 @@ contract Game is GameStatus {
         hostHandHashed = _hostHandHashed;
     }
 
-    function join(address _guestAddress, Hand _guestHand)
-        external
-        isStatusCreated
-        isNotHost
-    {
-        // approveTransferの確認
-
-        guestAddress = _guestAddress;
+    function join(Hand _guestHand) external isStatusCreated isNotHost {
+        guestAddress = msg.sender;
         guestHand = _guestHand;
         setStatusReady();
     }
