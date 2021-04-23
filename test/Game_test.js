@@ -147,6 +147,12 @@ contract("Game", accounts => {
         assert.equal(actual, expected, "events should match");
       });
 
+      it("emits the GameJudged event", async () => {
+        const actual = tx.logs[1].event;
+        const expected = "GameJudged";
+        assert.equal(actual, expected, "events should match");
+      });
+
       it("winner is guest", async () => {
           const actual = await game.winnerAddress();
           const expected = guest;

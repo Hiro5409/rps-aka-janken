@@ -5,6 +5,10 @@ pragma solidity 0.6.8;
 import "./GameStatus.sol";
 
 contract Game is GameStatus {
+    event GameJoined(address indexed guest, Hand guestHand);
+    event GameRevealed(Hand hostHand);
+    event GameJudged(address indexed winnerAddress);
+
     enum Hand {Rock, Paper, Scissors}
     // TODO: Change minimum BetAmount
     uint256 public constant BET_AMOUNT = 5;
@@ -13,10 +17,8 @@ contract Game is GameStatus {
     address public guestAddress;
     address public winnerAddress;
     bytes32 public hostHandHashed;
-    Hand hostHand;
-    Hand guestHand;
-
-    bytes32 public hostSalt;
+    Hand public hostHand;
+    Hand public guestHand;
 
     modifier isNotHost() {
         require(
@@ -51,6 +53,7 @@ contract Game is GameStatus {
         guestAddress = msg.sender;
         guestHand = _guestHand;
         setStatusReady();
+        emit GameJoined(msg.sender, _guestHand);
     }
 
     function revealHostHand(Hand _hostHand, bytes32 _hostSalt)
@@ -59,6 +62,9 @@ contract Game is GameStatus {
         isHost
         isValidHand(_hostHand, _hostSalt)
     {
+        hostHand = _hostHand;
+        emit GameRevealed(_hostHand);
+        judge();
     }
 
     function judge() private {
@@ -78,5 +84,6 @@ contract Game is GameStatus {
             winnerAddress = hostAddress;
         }
         setStatusDone();
+        emit GameJudged(winnerAddress);
     }
 }
