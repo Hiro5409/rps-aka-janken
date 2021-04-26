@@ -1,6 +1,6 @@
 const JankenToken = artifacts.require("JankenToken");
-const Game = artifacts.require("Game");
 const GameFactory = artifacts.require("GameFactory");
+const GameBank = artifacts.require("GameBank");
 
 const initialTokenAmount = 100;
 
@@ -15,4 +15,5 @@ module.exports = async (deployer, _network, accounts) => {
   await jkt.mint(guest, initialTokenAmount,{ from: master });
 
   await deployer.deploy(GameFactory);
+  await deployer.deploy(GameBank, jkt.address);
 };
