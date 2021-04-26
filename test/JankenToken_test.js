@@ -1,4 +1,5 @@
 const JankenTokenContract = artifacts.require("JankenToken");
+const GameBankContract = artifacts.require("GameBank");
 
 contract("JankenToken: deployed", accounts => {
   it("it has been deployed", async () => {
@@ -6,7 +7,7 @@ contract("JankenToken: deployed", accounts => {
     assert(jankenToken, "JankenToken was not deployed");;
   });
 
-  it("host and guest has 100 jkt", async () => {
+  it("100 jkt was distributed to host and guest", async () => {
     const jankenToken = await JankenTokenContract.deployed();
     const host = accounts[1];
     const guest = accounts[2];
@@ -21,12 +22,16 @@ contract("JankenToken: deployed", accounts => {
 
 contract("JankenToken", accounts => {
   let jankenToken;
+  let gameBank;
+  let gameBankAddress;
   const master = accounts[0];
   const host = accounts[1];
   const guest = accounts[2];
 
   beforeEach(async () => {
-    jankenToken = await JankenTokenContract.new()
+    jankenToken = await JankenTokenContract.new();
+    gameBank = await GameBankContract.new(jankenToken.address);
+    gameBankAddress = gameBank.address;
   });
 
   describe("minting", () => {
@@ -34,7 +39,7 @@ contract("JankenToken", accounts => {
 
     it("mint when called by master", async () => {
       const currentBalance = (await jankenToken.balanceOf(host)).toNumber();
-      await jankenToken.mint(host, mintAmount,{ from: master });
+      await jankenToken.mint(host, mintAmount, { from: master });
       const newBalanece = (await jankenToken.balanceOf(host)).toNumber();
 
       const actual = newBalanece - currentBalance;
@@ -80,6 +85,19 @@ contract("JankenToken", accounts => {
         const actual = e.reason;
         assert.equal(actual, expected, "should not be permitted");
       }
+    });
+  });
+
+  describe("approve", () => {
+    const amount = 10;
+
+    it("approve", async () => {
+      const previousAllowance = (await jankenToken.allowance(host, gameBankAddress)).toNumber();
+      await jankenToken.approve(gameBankAddress, amount, { from: host });
+      const nextAllowance = (await jankenToken.allowance(host, gameBankAddress)).toNumber();
+      const expected = amount;
+      const actual = nextAllowance - previousAllowance;
+      assert.equal(actual, expected, "approved amount should match");
     });
   });
 });
