@@ -19,4 +19,12 @@ contract GameBank {
         userToBalance[msg.sender] = _amount;
         emit DepositToken(msg.sender, address(this), _amount);
     }
+
+    function depositedSufficientToken(address _user, uint256 _amount)
+        public
+        view
+        returns (bool)
+    {
+        return userToBalance[_user] >= _amount;
+    }
 }
