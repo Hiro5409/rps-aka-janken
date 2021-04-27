@@ -48,4 +48,26 @@ contract("GameFactory", accounts => {
       }
     });
   });
+
+  describe("sufficient deposit funds", () => {
+    beforeEach(async () => {
+      await jankenToken.mint(host, mintAmount,{ from: master });
+      await jankenToken.approve(gameBank.address, betAmount, { from: host });
+      await gameBank.depositToken(betAmount, { from: host });
+    });
+
+    it("create new game", async () => {
+      await factory.createGame(gameBank.address, betAmount, hostHandHashed, { from: host });
+      const games = await factory.games();
+      game = await GameContract.at(games[0]);
+      assert(game, "instance of Game should be present");;
+    });
+
+    it("emits the GameCreated event", async () => {
+      tx = await factory.createGame(gameBank.address, betAmount, hostHandHashed, { from: host });
+      const actual = tx.logs[0].event;
+      const expected = "GameCreated";
+      assert.equal(actual, expected, "events should match");
+    });
+  });
 });
