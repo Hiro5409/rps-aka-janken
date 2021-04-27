@@ -3,20 +3,21 @@
 pragma solidity 0.6.8;
 
 import "./GameStatus.sol";
+import "./GameBank.sol";
 
 contract Game is GameStatus {
     event GameJoined(address indexed guest, Hand guestHand);
     event GameRevealed(Hand hostHand);
     event GameJudged(address indexed winnerAddress);
+    address public gameBankAddress;
 
     enum Hand {Rock, Paper, Scissors}
-    // TODO: Change minimum BetAmount
-    uint256 public constant BET_AMOUNT = 5;
 
     address public hostAddress;
     address public guestAddress;
     address public winnerAddress;
     bytes32 public hostHandHashed;
+    uint256 public betAmount;
     Hand public hostHand;
     Hand public guestHand;
 
@@ -44,12 +45,36 @@ contract Game is GameStatus {
         _;
     }
 
-    constructor(address _hostAddress, bytes32 _hostHandHashed) public {
-        hostAddress = _hostAddress;
-        hostHandHashed = _hostHandHashed;
+    modifier isUserDepositedSufficientToken(
+        address _gameBankAddress,
+        uint256 _amount
+    ) {
+        GameBank gameBank = GameBank(_gameBankAddress);
+        require(
+            gameBank.isUserDepositedSufficientToken(msg.sender, _amount),
+            "Insufficient token deposited in GameBank"
+        );
+        _;
     }
 
-    function join(Hand _guestHand) external isStatusCreated isNotHost {
+    constructor(
+        address _hostAddress,
+        uint256 _betAmount,
+        bytes32 _hostHandHashed,
+        address _gameBankAddress
+    ) public {
+        hostAddress = _hostAddress;
+        hostHandHashed = _hostHandHashed;
+        betAmount = _betAmount;
+        gameBankAddress = _gameBankAddress;
+    }
+
+    function join(Hand _guestHand)
+        external
+        isStatusCreated
+        isNotHost
+        isUserDepositedSufficientToken(gameBankAddress, betAmount)
+    {
         guestAddress = msg.sender;
         guestHand = _guestHand;
         setStatusReady();
