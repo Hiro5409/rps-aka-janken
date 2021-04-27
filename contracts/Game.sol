@@ -94,7 +94,7 @@ contract Game is GameStatus {
 
     function judge() private {
         if (hostHand == guestHand) {
-            // 引き分け
+            winnerAddress = address(0);
         } else if (hostHand == Hand.Rock && guestHand == Hand.Paper) {
             winnerAddress = guestAddress;
         } else if (hostHand == Hand.Rock && guestHand == Hand.Scissors) {
