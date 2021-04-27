@@ -7,6 +7,7 @@ import "./GameBank.sol";
 
 contract GameFactory {
     address[] private _games;
+    address public gameBankAddress;
 
     event GameCreated(address indexed game, address indexed host);
 
@@ -19,11 +20,14 @@ contract GameFactory {
         _;
     }
 
-    function createGame(
-        address _gameBankAddress,
-        uint256 _betAmount,
-        bytes32 _hostHandHashed
-    ) public deposited(_gameBankAddress, _betAmount) {
+    constructor(address _gameBankAddress) public {
+        gameBankAddress = _gameBankAddress;
+    }
+
+    function createGame(uint256 _betAmount, bytes32 _hostHandHashed)
+        public
+        deposited(gameBankAddress, _betAmount)
+    {
         Game game = new Game(msg.sender, _hostHandHashed);
         _games.push(address(game));
         emit GameCreated(address(game), msg.sender);

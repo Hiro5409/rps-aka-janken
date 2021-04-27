@@ -34,13 +34,13 @@ contract("GameFactory", accounts => {
   beforeEach(async ()=>{
     jankenToken = await JankenTokenContract.new();
     gameBank = await GameBankContract.new(jankenToken.address);
-    factory = await GameFactoryContract.new();
+    factory = await GameFactoryContract.new(gameBank.address);
   });
 
   describe("insufficient deposit funds", () => {
     it("throws an error by insufficient deposit funds", async () => {
       try {
-        await factory.createGame(gameBank.address, betAmount, hostHandHashed, { from: host });
+        await factory.createGame(betAmount, hostHandHashed, { from: host });
       } catch (e) {
         const expected = "Insufficient token deposited in GameBank";
         const actual = e.reason;
@@ -57,14 +57,14 @@ contract("GameFactory", accounts => {
     });
 
     it("create new game", async () => {
-      await factory.createGame(gameBank.address, betAmount, hostHandHashed, { from: host });
+      await factory.createGame(betAmount, hostHandHashed, { from: host });
       const games = await factory.games();
       game = await GameContract.at(games[0]);
       assert(game, "instance of Game should be present");;
     });
 
     it("emits the GameCreated event", async () => {
-      tx = await factory.createGame(gameBank.address, betAmount, hostHandHashed, { from: host });
+      tx = await factory.createGame(betAmount, hostHandHashed, { from: host });
       const actual = tx.logs[0].event;
       const expected = "GameCreated";
       assert.equal(actual, expected, "events should match");
