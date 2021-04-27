@@ -20,7 +20,7 @@ contract GameBank {
         emit DepositToken(msg.sender, address(this), _amount);
     }
 
-    function depositedSufficientToken(address _user, uint256 _amount)
+    function isUserDepositedSufficientToken(address _user, uint256 _amount)
         public
         view
         returns (bool)

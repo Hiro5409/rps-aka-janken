@@ -11,10 +11,13 @@ contract GameFactory {
 
     event GameCreated(address indexed game, address indexed host);
 
-    modifier deposited(address _gameBankAddress, uint256 _amount) {
+    modifier isUserDepositedSufficientToken(
+        address _gameBankAddress,
+        uint256 _amount
+    ) {
         GameBank gameBank = GameBank(_gameBankAddress);
         require(
-            gameBank.depositedSufficientToken(msg.sender, _amount),
+            gameBank.isUserDepositedSufficientToken(msg.sender, _amount),
             "Insufficient token deposited in GameBank"
         );
         _;
@@ -26,9 +29,10 @@ contract GameFactory {
 
     function createGame(uint256 _betAmount, bytes32 _hostHandHashed)
         public
-        deposited(gameBankAddress, _betAmount)
+        isUserDepositedSufficientToken(gameBankAddress, _betAmount)
     {
-        Game game = new Game(msg.sender, _hostHandHashed);
+        Game game =
+            new Game(msg.sender, _betAmount, _hostHandHashed, gameBankAddress);
         _games.push(address(game));
         emit GameCreated(address(game), msg.sender);
     }
