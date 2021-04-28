@@ -14,7 +14,9 @@ const Status = {
   Ready: 1,
   Canceled: 2,
   TimedOut: 3,
-  Done: 4,
+  Decided: 4,
+  Tied: 5,
+  Paid: 6,
 };
 
 contract("Game", accounts => {
@@ -155,12 +157,12 @@ contract("Game", accounts => {
     });
 
     describe("valid hand", () => {
-      it("change status from Ready to Done when reveal game", async () => {
+      it("change status from Ready to Decided when reveal game", async () => {
         const prevStatus = await game.status();
         await game.revealHostHand(hostHand, salt, { from: host })
         const nextStatus = await game.status();
         assert.equal(prevStatus, Status.Ready, "previous status should be Ready");
-        assert.equal(nextStatus, Status.Done, "status should be Done");
+        assert.equal(nextStatus, Status.Decided, "status should be Decided");
       });
 
       it("emits the GameRevealed event", async () => {
@@ -187,7 +189,7 @@ contract("Game", accounts => {
   });
 });
 
-// TODO: Refactor
+
 contract("Game: judgement", accounts => {
   let factory;
   let jankenToken;
@@ -198,6 +200,16 @@ contract("Game: judgement", accounts => {
   const mintAmount = 100;
   const betAmount = 5;
   const salt = web3.utils.toHex('Thank you.');
+  const createHostHandHashed = (hostHand) => web3.utils.soliditySha3(
+    {
+      type: 'uint8',
+      value: hostHand,
+    },
+    {
+      type: 'bytes32',
+      value: salt,
+    }
+  );
 
   beforeEach(async () => {
     jankenToken = await JankenTokenContract.new();
@@ -212,171 +224,102 @@ contract("Game: judgement", accounts => {
     await gameBank.depositToken(betAmount, { from: guest });
   });
 
+  const playGame = async (guestHand, hostHand, hostHandHashed) => {
+    await factory.createGame(betAmount, hostHandHashed, { from: host });
+    const games = await factory.games();
+    const game = await GameContract.at(games[0]);
+
+    await game.join(guestHand, { from: guest });
+    await game.revealHostHand(hostHand, salt, { from: host });
+    const winner = await game.winnerAddress();
+    const status = await game.status();
+    return { winner, status };
+  };
+
+  const tiedGame = async ({ winner, status }) => {
+    const expected = '0x0000000000000000000000000000000000000000';
+    assert.equal(winner, expected, "No winner");
+    assert.equal(status, Status.Tied, "status should be Tied");
+  };
+
+  const hostWinsGame = async ({ winner, status }) => {
+    const expected = host;
+    assert.equal(winner, expected, "winner should be host");
+    assert.equal(status, Status.Decided, "status should be Decided");
+  };
+
+  const guestWinsGame = async ({ winner, status }) => {
+    const expected = guest;
+    assert.equal(winner, expected, "winner should be guest");
+    assert.equal(status, Status.Decided, "status should be Decided");
+  };
+
   describe("host submits Rock", () => {
     const hostHand = Hand.Rock;
-    const hostHandHashed = web3.utils.soliditySha3(
-      {
-        type: 'uint8',
-        value: hostHand,
-      },
-      {
-        type: 'bytes32',
-        value: salt,
-      }
-    );
+    const hostHandHashed = createHostHandHashed(hostHand);
 
     it("guest submits Rock", async () => {
       const guestHand = Hand.Rock;
-
-      await factory.createGame(betAmount, hostHandHashed, { from: host });
-      const games = await factory.games();
-      const game = await GameContract.at(games[0]);
-
-      await game.join(guestHand, { from: guest });
-      await game.revealHostHand(hostHand, salt, { from: host });
-      const actual = await game.winnerAddress();
-      const expected = '0x0000000000000000000000000000000000000000';
-      assert.equal(actual, expected, "No winner");
+      const { winner, status } = await playGame(guestHand, hostHand, hostHandHashed);
+      await tiedGame({ winner, status });
     });
 
     it("guest submits Scissors", async () => {
       const guestHand = Hand.Scissors;
-
-      await factory.createGame(betAmount, hostHandHashed, { from: host });
-      const games = await factory.games();
-      const game = await GameContract.at(games[0]);
-
-      await game.join(guestHand, { from: guest });
-      await game.revealHostHand(hostHand, salt, { from: host });
-      const actual = await game.winnerAddress();
-      const expected = host;
-      assert.equal(actual, expected, "winner should be host");
+      const { winner, status } = await playGame(guestHand, hostHand, hostHandHashed);
+      await hostWinsGame({ winner, status });
     });
 
     it("guest submits Paper", async () => {
       const guestHand = Hand.Paper;
-
-      await factory.createGame(betAmount, hostHandHashed, { from: host });
-      const games = await factory.games();
-      const game = await GameContract.at(games[0]);
-
-      await game.join(guestHand, { from: guest });
-      await game.revealHostHand(hostHand, salt, { from: host });
-      const actual = await game.winnerAddress();
-      const expected = guest;
-      assert.equal(actual, expected, "winner should be guest");
+      const { winner, status } = await playGame(guestHand, hostHand, hostHandHashed);
+      await guestWinsGame({ winner, status });
     });
   });
 
   describe("host submits Scissors", () => {
     const hostHand = Hand.Scissors;
-    const hostHandHashed = web3.utils.soliditySha3(
-      {
-        type: 'uint8',
-        value: hostHand,
-      },
-      {
-        type: 'bytes32',
-        value: salt,
-      }
-    );
+    const hostHandHashed = createHostHandHashed(hostHand);
 
     it("guest submits Rock", async () => {
       const guestHand = Hand.Rock;
-
-      await factory.createGame(betAmount, hostHandHashed, { from: host });
-      const games = await factory.games();
-      const game = await GameContract.at(games[0]);
-
-      await game.join(guestHand, { from: guest });
-      await game.revealHostHand(hostHand, salt, { from: host });
-      const actual = await game.winnerAddress();
-      const expected = guest;
-      assert.equal(actual, expected, "winner should be guest");
+      const { winner, status } = await playGame(guestHand, hostHand, hostHandHashed);
+      await guestWinsGame({ winner, status });
     });
 
     it("guest submits Scissors", async () => {
       const guestHand = Hand.Scissors;
-
-      await factory.createGame(betAmount, hostHandHashed, { from: host });
-      const games = await factory.games();
-      const game = await GameContract.at(games[0]);
-
-      await game.join(guestHand, { from: guest });
-      await game.revealHostHand(hostHand, salt, { from: host });
-      const actual = await game.winnerAddress();
-      const expected = '0x0000000000000000000000000000000000000000';
-      assert.equal(actual, expected, "No winner");
+      const { winner, status } = await playGame(guestHand, hostHand, hostHandHashed);
+      await tiedGame({ winner, status });
     });
 
     it("guest submits Paper", async () => {
       const guestHand = Hand.Paper;
-
-      await factory.createGame(betAmount, hostHandHashed, { from: host });
-      const games = await factory.games();
-      const game = await GameContract.at(games[0]);
-
-      await game.join(guestHand, { from: guest });
-      await game.revealHostHand(hostHand, salt, { from: host });
-      const actual = await game.winnerAddress();
-      const expected = host;
-      assert.equal(actual, expected, "winner should be host");
+      const { winner, status } = await playGame(guestHand, hostHand, hostHandHashed);
+      await hostWinsGame({ winner, status });
     });
   });
 
   describe("host submits Paper", () => {
     const hostHand = Hand.Paper;
-    const hostHandHashed = web3.utils.soliditySha3(
-      {
-        type: 'uint8',
-        value: hostHand,
-      },
-      {
-        type: 'bytes32',
-        value: salt,
-      }
-    );
+    const hostHandHashed = createHostHandHashed(hostHand);
 
     it("guest submits Rock", async () => {
       const guestHand = Hand.Rock;
-
-      await factory.createGame(betAmount, hostHandHashed, { from: host });
-      const games = await factory.games();
-      const game = await GameContract.at(games[0]);
-
-      await game.join(guestHand, { from: guest });
-      await game.revealHostHand(hostHand, salt, { from: host });
-      const actual = await game.winnerAddress();
-      const expected = host;
-      assert.equal(actual, expected, "winner should be host");
+      const { winner, status } = await playGame(guestHand, hostHand, hostHandHashed);
+      await hostWinsGame({ winner, status });
     });
 
     it("guest submits Scissors", async () => {
       const guestHand = Hand.Scissors;
-
-      await factory.createGame(betAmount, hostHandHashed, { from: host });
-      const games = await factory.games();
-      const game = await GameContract.at(games[0]);
-
-      await game.join(guestHand, { from: guest });
-      await game.revealHostHand(hostHand, salt, { from: host });
-      const actual = await game.winnerAddress();
-      const expected = guest;
-      assert.equal(actual, expected, "winner should be guest");
+      const { winner, status } = await playGame(guestHand, hostHand, hostHandHashed);
+      await guestWinsGame({ winner, status });
     });
 
     it("guest submits Paper", async () => {
       const guestHand = Hand.Paper;
-
-      await factory.createGame(betAmount, hostHandHashed, { from: host });
-      const games = await factory.games();
-      const game = await GameContract.at(games[0]);
-
-      await game.join(guestHand, { from: guest });
-      await game.revealHostHand(hostHand, salt, { from: host });
-      const actual = await game.winnerAddress();
-      const expected = '0x0000000000000000000000000000000000000000';
-      assert.equal(actual, expected, "No winner");
+      const { winner, status } = await playGame(guestHand, hostHand, hostHandHashed);
+      await tiedGame({ winner, status });
     });
   });
 });
