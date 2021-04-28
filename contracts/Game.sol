@@ -9,10 +9,9 @@ contract Game is GameStatus {
     event GameJoined(address indexed guest, Hand guestHand);
     event GameRevealed(Hand hostHand);
     event GameJudged(address indexed winnerAddress);
-    address public gameBankAddress;
-
     enum Hand {Rock, Paper, Scissors}
-
+    uint256 timeoutSeconds;
+    address public gameBankAddress;
     address public hostAddress;
     address public guestAddress;
     address public winnerAddress;
@@ -60,11 +59,13 @@ contract Game is GameStatus {
     constructor(
         address _hostAddress,
         uint256 _betAmount,
+        uint256 _timeoutSeconds,
         bytes32 _hostHandHashed,
         address _gameBankAddress
     ) public {
         hostAddress = _hostAddress;
         hostHandHashed = _hostHandHashed;
+        timeoutSeconds = _timeoutSeconds;
         betAmount = _betAmount;
         gameBankAddress = _gameBankAddress;
     }

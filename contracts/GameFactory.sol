@@ -10,6 +10,7 @@ contract GameFactory {
     address public gameBankAddress;
 
     uint256 public constant minBetAmount = 5;
+    uint256 public timeoutSeconds = 21600;
 
     event GameCreated(address indexed game, address indexed host);
 
@@ -40,7 +41,13 @@ contract GameFactory {
         isUserDepositedSufficientToken(gameBankAddress, _betAmount)
     {
         Game game =
-            new Game(msg.sender, _betAmount, _hostHandHashed, gameBankAddress);
+            new Game(
+                msg.sender,
+                _betAmount,
+                timeoutSeconds,
+                _hostHandHashed,
+                gameBankAddress
+            );
         _games.push(address(game));
         emit GameCreated(address(game), msg.sender);
     }
