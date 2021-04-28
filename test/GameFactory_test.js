@@ -37,6 +37,18 @@ contract("GameFactory", accounts => {
     factory = await GameFactoryContract.new(gameBank.address);
   });
 
+  describe("required minimum bet amount", () => {
+    it("throws an error when bet amount does not exceeds minimum", async () => {
+      try {
+        await factory.createGame(1, hostHandHashed, { from: host });
+      } catch (e) {
+        const expected = "requried minimum bet amount";
+        const actual = e.reason;
+        assert.equal(actual, expected, "should not be permitted");
+      }
+    });
+  });
+
   describe("insufficient deposit funds", () => {
     it("throws an error by insufficient deposit funds", async () => {
       try {
