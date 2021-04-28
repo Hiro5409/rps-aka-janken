@@ -96,20 +96,23 @@ contract Game is GameStatus {
     function judge() private {
         if (hostHand == guestHand) {
             winnerAddress = address(0);
-        } else if (hostHand == Hand.Rock && guestHand == Hand.Paper) {
-            winnerAddress = guestAddress;
-        } else if (hostHand == Hand.Rock && guestHand == Hand.Scissors) {
-            winnerAddress = hostAddress;
-        } else if (hostHand == Hand.Paper && guestHand == Hand.Rock) {
-            winnerAddress = hostAddress;
-        } else if (hostHand == Hand.Paper && guestHand == Hand.Scissors) {
-            winnerAddress = guestAddress;
-        } else if (hostHand == Hand.Scissors && guestHand == Hand.Rock) {
-            winnerAddress = guestAddress;
-        } else if (hostHand == Hand.Scissors && guestHand == Hand.Paper) {
-            winnerAddress = hostAddress;
+            setStatusTied();
+        } else {
+            if (hostHand == Hand.Rock && guestHand == Hand.Paper) {
+                winnerAddress = guestAddress;
+            } else if (hostHand == Hand.Rock && guestHand == Hand.Scissors) {
+                winnerAddress = hostAddress;
+            } else if (hostHand == Hand.Paper && guestHand == Hand.Rock) {
+                winnerAddress = hostAddress;
+            } else if (hostHand == Hand.Paper && guestHand == Hand.Scissors) {
+                winnerAddress = guestAddress;
+            } else if (hostHand == Hand.Scissors && guestHand == Hand.Rock) {
+                winnerAddress = guestAddress;
+            } else if (hostHand == Hand.Scissors && guestHand == Hand.Paper) {
+                winnerAddress = hostAddress;
+            }
+            setStatusDecided();
         }
-        setStatusDone();
         emit GameJudged(winnerAddress);
     }
 }

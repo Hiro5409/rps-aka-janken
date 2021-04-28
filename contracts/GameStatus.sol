@@ -3,7 +3,7 @@
 pragma solidity 0.6.8;
 
 contract GameStatus {
-    enum Status {Created, Ready, Canceled, TimedOut, Done}
+    enum Status {Created, Ready, Canceled, TimedOut, Decided, Tied, Paid}
 
     Status public status = Status.Created;
 
@@ -24,7 +24,11 @@ contract GameStatus {
         status = Status.Ready;
     }
 
-    function setStatusDone() internal {
-        status = Status.Done;
+    function setStatusDecided() internal {
+        status = Status.Decided;
+    }
+
+    function setStatusTied() internal {
+        status = Status.Tied;
     }
 }
