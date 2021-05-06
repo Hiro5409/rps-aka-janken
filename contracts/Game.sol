@@ -8,7 +8,10 @@ import "./GameBank.sol";
 contract Game is GameStatus {
     event GameJoined(address indexed guest, Hand guestHand);
     event GameRevealed(Hand hostHand);
-    event GameJudged(address indexed winnerAddress);
+    event GameJudged(
+        address indexed winnerAddress,
+        address indexed loserAddress
+    );
     enum Hand {Rock, Paper, Scissors}
     uint256 public timeGameJudged;
     uint256 public timeoutSeconds;
@@ -16,6 +19,7 @@ contract Game is GameStatus {
     address public hostAddress;
     address public guestAddress;
     address public winnerAddress;
+    address public loserAddress;
     bytes32 public hostHandHashed;
     uint256 public betAmount;
     Hand public hostHand;
@@ -105,25 +109,32 @@ contract Game is GameStatus {
     function judge() private {
         if (hostHand == guestHand) {
             winnerAddress = address(0);
+            loserAddress = address(0);
             setStatusTied();
         } else {
             if (hostHand == Hand.Rock && guestHand == Hand.Paper) {
                 winnerAddress = guestAddress;
+                loserAddress = hostAddress;
             } else if (hostHand == Hand.Rock && guestHand == Hand.Scissors) {
                 winnerAddress = hostAddress;
+                loserAddress = guestAddress;
             } else if (hostHand == Hand.Paper && guestHand == Hand.Rock) {
                 winnerAddress = hostAddress;
+                loserAddress = guestAddress;
             } else if (hostHand == Hand.Paper && guestHand == Hand.Scissors) {
                 winnerAddress = guestAddress;
+                loserAddress = hostAddress;
             } else if (hostHand == Hand.Scissors && guestHand == Hand.Rock) {
                 winnerAddress = guestAddress;
+                loserAddress = hostAddress;
             } else if (hostHand == Hand.Scissors && guestHand == Hand.Paper) {
                 winnerAddress = hostAddress;
+                loserAddress = guestAddress;
             }
             setStatusDecided();
         }
         timeGameJudged = block.timestamp;
-        emit GameJudged(winnerAddress);
+        emit GameJudged(winnerAddress, loserAddress);
     }
 
     function isPayableGameStatus() external view returns (bool) {
