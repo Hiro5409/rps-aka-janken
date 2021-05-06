@@ -117,4 +117,11 @@ contract Game is GameStatus {
         timeGameJudged = block.timestamp;
         emit GameJudged(winnerAddress);
     }
+
+    function isPayableGameStatus() external view returns (bool) {
+        return
+            status == Status.Tied ||
+            status == Status.Decided ||
+            status == Status.TimedOut;
+    }
 }

@@ -31,5 +31,6 @@ contract GameBank {
 
     function getGameRewards(address _gameAddress) external view {
         Game game = Game(_gameAddress);
+        require(game.isPayableGameStatus(), "This game was not settled");
     }
 }

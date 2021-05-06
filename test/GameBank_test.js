@@ -111,5 +111,17 @@ contract("GameBank", accounts => {
       await setupGame({ jankenToken, gameBank,  accounts });
     });
 
+    it("throws an error when game status was invalid", async () => {
+      const hostHand = Hand.Rock;
+      const game = await createGame({ hostHand, factory, host, salt });
+      try {
+        await gameBank.getGameRewards(game.address, { from: guest });
+        assert.fail("host cannot withdraw");
+      } catch (e) {
+        const expected = "Returned error: VM Exception while processing transaction: revert This game was not settled";
+        const actual = e.message;
+        assert.equal(actual, expected, "should not be permitted");
+      }
+    });
   });
 });
