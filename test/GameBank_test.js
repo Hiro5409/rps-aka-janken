@@ -116,24 +116,33 @@ contract("GameBank", accounts => {
       const game = await createGame({ hostHand, factory, host, salt });
       try {
         await gameBank.getGameRewards(game.address, { from: guest });
-        assert.fail("host cannot withdraw");
+        assert.fail("invalid status");
       } catch (e) {
-        const expected = "Returned error: VM Exception while processing transaction: revert This game was not settled";
-        const actual = e.message;
+        const expected = "This game was not settled";
+        const actual = e.reason;
         assert.equal(actual, expected, "should not be permitted");
       }
     });
 
     describe("the game was decided", () => {
-      const hostHand = Hand.Rock;
-      it("throws an error when try to withdraw by host", async () => {
+      let game;
+
+      beforeEach(async () => {
+        const hostHand = Hand.Rock;
         const guestHand = Hand.Paper;
-        const { game } = await playGame({ factory, hostHand, guestHand, accounts });
+        const { game: _game, winner, status } = await playGame({ factory, hostHand, guestHand, accounts });
+        game = _game;
+        assert.equal(status.toNumber(), Status.Decided, "status should be Decided");
+        assert.equal(winner, guest, "winner should be guest");
+      });
+
+      it("throws an error when try to withdraw by loser", async () => {
         try {
           await gameBank.getGameRewards(game.address,{ from: host });
+          assert.fail("host cannot withdraw");
         } catch (e) {
-          const expected = "Returned error: VM Exception while processing transaction: revert Only winner of this game gets rewards"
-          const actual = e.message;
+          const expected = "Only winner of this game gets rewards"
+          const actual = e.reason;
           assert.equal(actual, expected, "should not be permitted");
         }
       });
