@@ -3,6 +3,7 @@
 pragma solidity 0.6.8;
 
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import "./Game.sol";
 
 contract GameBank {
     IERC20 private token;
@@ -26,5 +27,9 @@ contract GameBank {
         returns (bool)
     {
         return userToBalance[_user] >= _amount;
+    }
+
+    function getGameRewards(address _gameAddress) external view {
+        Game game = Game(_gameAddress);
     }
 }
