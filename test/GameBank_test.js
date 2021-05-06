@@ -114,7 +114,7 @@ contract("GameBank", accounts => {
         await gameBank.getGameRewards(game.address, { from: guest });
         assert.fail("invalid status");
       } catch (e) {
-        const expected = "This game was not settled";
+        const expected = "status of this game is invalid";
         const actual = e.reason;
         assert.equal(actual, expected, "should not be permitted");
       }
@@ -135,9 +135,20 @@ contract("GameBank", accounts => {
       it("throws an error when try to withdraw by loser", async () => {
         try {
           await gameBank.getGameRewards(game.address,{ from: host });
-          assert.fail("host cannot withdraw");
+          assert.fail("host cannot to withdraw");
         } catch (e) {
           const expected = "Only winner of this game gets rewards"
+          const actual = e.reason;
+          assert.equal(actual, expected, "should not be permitted");
+        }
+      });
+
+      it("throws an error when try to refund", async () => {
+        try {
+          await gameBank.refundDepositedTokens(game.address,{ from: guest });
+          assert.fail("cannot to refund when game is decided");
+        } catch (e) {
+          const expected = "This game was not tied"
           const actual = e.reason;
           assert.equal(actual, expected, "should not be permitted");
         }
@@ -173,6 +184,18 @@ contract("GameBank", accounts => {
         const expected = Status.Paid;
         assert.equal(actual, expected, "status should be Paid");
       });
+
+      it("fail to withdraw more than 2 times", async () => {
+        await gameBank.getGameRewards(game.address,{ from: guest });
+        try {
+          await gameBank.getGameRewards(game.address,{ from: guest });
+        } catch (e) {
+          const expected = "status of this game is invalid";
+          const actual = e.reason;
+          assert.equal(actual, expected, "should not be permitted");
+        }
+      });
+    });
     });
   });
 });

@@ -33,7 +33,7 @@ contract GameBank {
     function getGameRewards(address _gameAddress) external {
         Game game = Game(_gameAddress);
         address winner = msg.sender;
-        require(game.isPayableGameStatus(), "This game was not settled");
+        require(game.isPayableGameStatus(), "status of this game is invalid");
         require(
             game.winnerAddress() == winner,
             "Only winner of this game gets rewards"
@@ -46,5 +46,10 @@ contract GameBank {
         token.transfer(winner, amount * 2);
         emit WithdrawTokens(winner, amount);
         game.setStatusPaid();
+    }
+
+    function refundDepositedTokens(address _gameAddress) external {
+        Game game = Game(_gameAddress);
+        require(game.isTiedGame(), "This game was not tied");
     }
 }

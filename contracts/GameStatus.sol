@@ -20,6 +20,14 @@ contract GameStatus {
         _;
     }
 
+    function isPayableGameStatus() external view returns (bool) {
+        return status == Status.Decided || status == Status.TimedOut;
+    }
+
+    function isTiedGame() external view returns (bool) {
+        return status == Status.Tied;
+    }
+
     function setStatusReady() internal {
         status = Status.Ready;
     }
