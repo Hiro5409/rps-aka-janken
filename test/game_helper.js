@@ -58,5 +58,6 @@ module.exports = {
   setupGame,
   playGame,
   createGame,
+  BET_AMOUNT,
 };
 

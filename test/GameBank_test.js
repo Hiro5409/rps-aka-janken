@@ -2,7 +2,7 @@ const GameBankContract = artifacts.require("GameBank");
 const JankenTokenContract = artifacts.require("JankenToken");
 const GameFactoryContract = artifacts.require("GameFactory");
 const GameContract = artifacts.require("Game");
-const { setupGame, playGame, createGame } = require("./game_helper");
+const { setupGame, playGame, createGame, BET_AMOUNT } = require("./game_helper");
 
 const Hand = {
   Rock: 0,
@@ -37,26 +37,24 @@ contract("GameBank", accounts => {
 
     it("deposit tokens in bank", async () => {
       const mintAmount = 100;
-      const betAmount = 5;
       await jankenToken.mint(host, mintAmount,{ from: master });
-      await jankenToken.approve(gameBankAddress, betAmount, { from: host });
+      await jankenToken.approve(gameBankAddress, BET_AMOUNT, { from: host });
 
       const currentBalance = (await jankenToken.balanceOf(gameBankAddress)).toNumber();
-      await gameBank.depositToken(betAmount, { from: host });
+      await gameBank.depositToken(BET_AMOUNT, { from: host });
       const newBalanece = (await jankenToken.balanceOf(gameBankAddress)).toNumber();
 
       const actual = newBalanece - currentBalance;
-      const expected = betAmount;
+      const expected = BET_AMOUNT;
       assert.equal(actual, expected, "balance should increment by bet amount");
     });
 
     it("emits the GameRevealed event", async () => {
       const mintAmount = 100;
-      const betAmount = 5;
       await jankenToken.mint(host, mintAmount,{ from: master });
-      await jankenToken.approve(gameBankAddress, betAmount, { from: host });
+      await jankenToken.approve(gameBankAddress, BET_AMOUNT, { from: host });
 
-      const tx = await gameBank.depositToken(betAmount, { from: host });
+      const tx = await gameBank.depositToken(BET_AMOUNT, { from: host });
       const actual = tx.logs[0].event;
       const expected = "DepositToken";
       assert.equal(actual, expected, "events should match");
@@ -64,12 +62,11 @@ contract("GameBank", accounts => {
 
     it("throws an error when try to deposit more than approved", async () => {
       const mintAmount = 100;
-      const betAmount = 5;
       await jankenToken.mint(host, mintAmount,{ from: master });
-      await jankenToken.approve(gameBankAddress, betAmount - 1, { from: host });
+      await jankenToken.approve(gameBankAddress, BET_AMOUNT - 1, { from: host });
 
       try {
-        await gameBank.depositToken(betAmount, { from: host });
+        await gameBank.depositToken(BET_AMOUNT, { from: host });
         assert.fail("exceed amount of allowance");
       } catch (e) {
         const expected = "ERC20: transfer amount exceeds allowance";
@@ -80,12 +77,11 @@ contract("GameBank", accounts => {
 
     it("throws an error when try to deposit more than owned", async () => {
       const mintAmount = 1;
-      const betAmount = 5;
       await jankenToken.mint(host, mintAmount,{ from: master });
-      await jankenToken.approve(gameBankAddress, betAmount, { from: host });
+      await jankenToken.approve(gameBankAddress, BET_AMOUNT, { from: host });
 
       try {
-        await gameBank.depositToken(betAmount, { from: host });
+        await gameBank.depositToken(BET_AMOUNT, { from: host });
         assert.fail("exceed amount of balance");
       } catch (e) {
         const expected = "ERC20: transfer amount exceeds balance";
