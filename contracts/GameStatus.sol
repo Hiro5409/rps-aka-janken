@@ -31,4 +31,8 @@ contract GameStatus {
     function setStatusTied() internal {
         status = Status.Tied;
     }
+
+    function setStatusPaid() external {
+        status = Status.Paid;
+    }
 }

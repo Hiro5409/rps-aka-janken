@@ -142,6 +142,37 @@ contract("GameBank", accounts => {
           assert.equal(actual, expected, "should not be permitted");
         }
       });
+
+      it("guest's balance of jkt increases and bank's decreases", async () => {
+        const withdrawnAmount = BET_AMOUNT * 2;
+        const beforeTokenBalanceOfGameBank = (await jankenToken.balanceOf(gameBank.address)).toNumber();
+        const beforeTokenBalanceOfGuest = (await jankenToken.balanceOf(guest)).toNumber();
+        const beforeHostBalance = (await gameBank.userToBalance(host)).toNumber();
+        const beforeGuestBalance = (await gameBank.userToBalance(guest)).toNumber();
+        await gameBank.getGameRewards(game.address,{ from: guest });
+        const afterTokenBalanceOfGameBank = (await jankenToken.balanceOf(gameBank.address)).toNumber();
+        const afterTokenBalanceOfGuest = (await jankenToken.balanceOf(guest)).toNumber();
+        const afterHostBalance = (await gameBank.userToBalance(host)).toNumber();
+        const afterGuestBalance = (await gameBank.userToBalance(guest)).toNumber();
+        assert.equal(beforeTokenBalanceOfGameBank - afterTokenBalanceOfGameBank, withdrawnAmount, "bank's balance of jkt should decreases by withdrawn amount");
+        assert.equal(afterTokenBalanceOfGuest - beforeTokenBalanceOfGuest, withdrawnAmount, "guest's balance of jkt should increases by withdrawn amount");
+        assert.equal(beforeHostBalance - afterHostBalance, BET_AMOUNT, "balance mapped to host should decreases by bet amount")
+        assert.equal(beforeGuestBalance - afterGuestBalance, BET_AMOUNT, "balance mapped to guest should decreases by bet amount")
+      });
+
+      it("emits the WithdrawTokens event", async () => {
+        const tx = await gameBank.getGameRewards(game.address,{ from: guest });
+        const actual = tx.logs[0].event;
+        const expected = "WithdrawTokens";
+        assert.equal(actual, expected, "events should match");
+      });
+
+      it("change game status to paid", async () => {
+        await gameBank.getGameRewards(game.address,{ from: guest });
+        const actual = (await game.status()).toNumber();
+        const expected = Status.Paid;
+        assert.equal(actual, expected, "status should be Paid");
+      });
     });
   });
 });

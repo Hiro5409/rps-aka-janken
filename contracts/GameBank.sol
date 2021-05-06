@@ -10,6 +10,7 @@ contract GameBank {
     mapping(address => uint256) public userToBalance;
 
     event DepositToken(address from, address to, uint256 amount);
+    event WithdrawTokens(address from, uint256 amount);
 
     constructor(address _token) public {
         token = IERC20(_token);
@@ -29,12 +30,21 @@ contract GameBank {
         return userToBalance[_user] >= _amount;
     }
 
-    function getGameRewards(address _gameAddress) external view {
+    function getGameRewards(address _gameAddress) external {
         Game game = Game(_gameAddress);
+        address winner = msg.sender;
         require(game.isPayableGameStatus(), "This game was not settled");
         require(
-            game.winnerAddress() == msg.sender,
+            game.winnerAddress() == winner,
             "Only winner of this game gets rewards"
         );
+
+        uint256 amount = game.betAmount();
+        address loser = game.loserAddress();
+        userToBalance[loser] -= amount;
+        userToBalance[winner] -= amount;
+        token.transfer(winner, amount * 2);
+        emit WithdrawTokens(winner, amount);
+        game.setStatusPaid();
     }
 }
