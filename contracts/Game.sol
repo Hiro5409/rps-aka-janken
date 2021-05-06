@@ -10,7 +10,8 @@ contract Game is GameStatus {
     event GameRevealed(Hand hostHand);
     event GameJudged(address indexed winnerAddress);
     enum Hand {Rock, Paper, Scissors}
-    uint256 timeoutSeconds;
+    uint256 public timeGameJudged;
+    uint256 public timeoutSeconds;
     address public gameBankAddress;
     address public hostAddress;
     address public guestAddress;
@@ -113,6 +114,7 @@ contract Game is GameStatus {
             }
             setStatusDecided();
         }
+        timeGameJudged = block.timestamp;
         emit GameJudged(winnerAddress);
     }
 }
