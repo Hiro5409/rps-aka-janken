@@ -2,6 +2,7 @@ const GameBankContract = artifacts.require("GameBank");
 const JankenTokenContract = artifacts.require("JankenToken");
 const GameFactoryContract = artifacts.require("GameFactory");
 const GameContract = artifacts.require("Game");
+const { setupGame, playGame } = require("./game_helper");
 
 const Hand = {
   Rock: 0,
@@ -194,47 +195,16 @@ contract("Game: judgement", accounts => {
   let factory;
   let jankenToken;
   let gameBank;
-  const master = accounts[0];
   const host = accounts[1];
   const guest = accounts[2];
-  const mintAmount = 100;
-  const betAmount = 5;
-  const salt = web3.utils.toHex('Thank you.');
-  const createHostHandHashed = (hostHand) => web3.utils.soliditySha3(
-    {
-      type: 'uint8',
-      value: hostHand,
-    },
-    {
-      type: 'bytes32',
-      value: salt,
-    }
-  );
 
   beforeEach(async () => {
     jankenToken = await JankenTokenContract.new();
     gameBank = await GameBankContract.new(jankenToken.address);
     factory = await GameFactoryContract.new(gameBank.address);
 
-    await jankenToken.mint(host, mintAmount, { from: master });
-    await jankenToken.mint(guest, mintAmount, { from: master });
-    await jankenToken.approve(gameBank.address, betAmount, { from: host });
-    await jankenToken.approve(gameBank.address, betAmount, { from: guest });
-    await gameBank.depositToken(betAmount, { from: host });
-    await gameBank.depositToken(betAmount, { from: guest });
+    await setupGame({ jankenToken, gameBank,  accounts });
   });
-
-  const playGame = async (guestHand, hostHand, hostHandHashed) => {
-    await factory.createGame(betAmount, hostHandHashed, { from: host });
-    const games = await factory.games();
-    const game = await GameContract.at(games[0]);
-
-    await game.join(guestHand, { from: guest });
-    await game.revealHostHand(hostHand, salt, { from: host });
-    const winner = await game.winnerAddress();
-    const status = await game.status();
-    return { winner, status };
-  };
 
   const tiedGame = async ({ winner, status }) => {
     const expected = '0x0000000000000000000000000000000000000000';
@@ -256,69 +226,66 @@ contract("Game: judgement", accounts => {
 
   describe("host submits Rock", () => {
     const hostHand = Hand.Rock;
-    const hostHandHashed = createHostHandHashed(hostHand);
 
     it("guest submits Rock", async () => {
       const guestHand = Hand.Rock;
-      const { winner, status } = await playGame(guestHand, hostHand, hostHandHashed);
+      const { winner, status } = await playGame({ factory, hostHand, guestHand, accounts });
       await tiedGame({ winner, status });
     });
 
     it("guest submits Scissors", async () => {
       const guestHand = Hand.Scissors;
-      const { winner, status } = await playGame(guestHand, hostHand, hostHandHashed);
+      const { winner, status } = await playGame({ factory, hostHand, guestHand, accounts });
       await hostWinsGame({ winner, status });
     });
 
     it("guest submits Paper", async () => {
       const guestHand = Hand.Paper;
-      const { winner, status } = await playGame(guestHand, hostHand, hostHandHashed);
+      const { winner, status } = await playGame({ factory, hostHand, guestHand, accounts });
       await guestWinsGame({ winner, status });
     });
   });
 
   describe("host submits Scissors", () => {
     const hostHand = Hand.Scissors;
-    const hostHandHashed = createHostHandHashed(hostHand);
 
     it("guest submits Rock", async () => {
       const guestHand = Hand.Rock;
-      const { winner, status } = await playGame(guestHand, hostHand, hostHandHashed);
+      const { winner, status } = await playGame({ factory, hostHand, guestHand, accounts });
       await guestWinsGame({ winner, status });
     });
 
     it("guest submits Scissors", async () => {
       const guestHand = Hand.Scissors;
-      const { winner, status } = await playGame(guestHand, hostHand, hostHandHashed);
+      const { winner, status } = await playGame({ factory, hostHand, guestHand, accounts });
       await tiedGame({ winner, status });
     });
 
     it("guest submits Paper", async () => {
       const guestHand = Hand.Paper;
-      const { winner, status } = await playGame(guestHand, hostHand, hostHandHashed);
+      const { winner, status } = await playGame({ factory, hostHand, guestHand, accounts });
       await hostWinsGame({ winner, status });
     });
   });
 
   describe("host submits Paper", () => {
     const hostHand = Hand.Paper;
-    const hostHandHashed = createHostHandHashed(hostHand);
 
     it("guest submits Rock", async () => {
       const guestHand = Hand.Rock;
-      const { winner, status } = await playGame(guestHand, hostHand, hostHandHashed);
+      const { winner, status } = await playGame({ factory, hostHand, guestHand, accounts });
       await hostWinsGame({ winner, status });
     });
 
     it("guest submits Scissors", async () => {
       const guestHand = Hand.Scissors;
-      const { winner, status } = await playGame(guestHand, hostHand, hostHandHashed);
+      const { winner, status } = await playGame({ factory, hostHand, guestHand, accounts });
       await guestWinsGame({ winner, status });
     });
 
     it("guest submits Paper", async () => {
       const guestHand = Hand.Paper;
-      const { winner, status } = await playGame(guestHand, hostHand, hostHandHashed);
+      const { winner, status } = await playGame({ factory, hostHand, guestHand, accounts });
       await tiedGame({ winner, status });
     });
   });
