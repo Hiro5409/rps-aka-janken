@@ -123,5 +123,20 @@ contract("GameBank", accounts => {
         assert.equal(actual, expected, "should not be permitted");
       }
     });
+
+    describe("the game was decided", () => {
+      const hostHand = Hand.Rock;
+      it("throws an error when try to withdraw by host", async () => {
+        const guestHand = Hand.Paper;
+        const { game } = await playGame({ factory, hostHand, guestHand, accounts });
+        try {
+          await gameBank.getGameRewards(game.address,{ from: host });
+        } catch (e) {
+          const expected = "Returned error: VM Exception while processing transaction: revert Only winner of this game gets rewards"
+          const actual = e.message;
+          assert.equal(actual, expected, "should not be permitted");
+        }
+      });
+    });
   });
 });

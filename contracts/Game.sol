@@ -37,6 +37,14 @@ contract Game is GameStatus {
         _;
     }
 
+    modifier isWinner() {
+        require(
+            msg.sender == winnerAddress,
+            "only winner of this game is authorized"
+        );
+        _;
+    }
+
     modifier isValidHand(Hand _hostHand, bytes32 _hostSalt) {
         require(
             keccak256(abi.encodePacked(_hostHand, _hostSalt)) == hostHandHashed,
