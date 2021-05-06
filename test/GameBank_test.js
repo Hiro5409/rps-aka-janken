@@ -1,5 +1,24 @@
 const GameBankContract = artifacts.require("GameBank");
 const JankenTokenContract = artifacts.require("JankenToken");
+const GameFactoryContract = artifacts.require("GameFactory");
+const GameContract = artifacts.require("Game");
+const { setupGame, playGame, createGame } = require("./game_helper");
+
+const Hand = {
+  Rock: 0,
+  Paper: 1,
+  Scissors: 2,
+};
+
+const Status = {
+  Created: 0,
+  Ready: 1,
+  Canceled: 2,
+  TimedOut: 3,
+  Decided: 4,
+  Tied: 5,
+  Paid: 6,
+};
 
 contract("GameBank", accounts => {
   const master = accounts[0];
@@ -74,5 +93,23 @@ contract("GameBank", accounts => {
         assert.equal(actual, expected, "should not be permitted");
       }
     });
+  });
+
+  describe("withdraw", () => {
+    let factory;
+    let jankenToken;
+    let gameBank;
+    const host = accounts[1];
+    const guest = accounts[2];
+    const salt = web3.utils.toHex('Thank you.');
+
+    beforeEach(async () => {
+      jankenToken = await JankenTokenContract.new();
+      gameBank = await GameBankContract.new(jankenToken.address);
+      factory = await GameFactoryContract.new(gameBank.address);
+
+      await setupGame({ jankenToken, gameBank,  accounts });
+    });
+
   });
 });
