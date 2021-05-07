@@ -1,0 +1,7 @@
+{
+  "name": "rps-aka-janken",
+  "version": "1.0.0",
+  "dependencies": {
+    "openzeppelin-solidity": "3.4.0"
+  }
+}
