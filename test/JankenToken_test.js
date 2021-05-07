@@ -1,5 +1,24 @@
 const JankenTokenContract = artifacts.require("JankenToken");
 
+contract("JankenToken: deployed", accounts => {
+  it("it has been deployed", async () => {
+    const jankenToken = await JankenTokenContract.deployed();
+    assert(jankenToken, "JankenToken was not deployed");;
+  });
+
+  it("100 jkt was distributed to host and guest", async () => {
+    const jankenToken = await JankenTokenContract.deployed();
+    const host = accounts[1];
+    const guest = accounts[2];
+
+    const hostBalance = (await jankenToken.balanceOf(host)).toNumber();
+    const guestBalance = (await jankenToken.balanceOf(guest)).toNumber();
+    const expected = 100;
+    assert.equal(hostBalance, expected, "host should have 100 JKT");;
+    assert.equal(guestBalance, expected, "guest should have 100 JKT");;
+  })
+});
+
 contract("JankenToken", accounts => {
   let jankenToken;
   const master = accounts[0];
