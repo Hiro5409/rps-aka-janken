@@ -8,14 +8,14 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 contract GameBank {
     using SafeMath for uint256;
     IERC20 private _token;
-    mapping(address => uint256) public _userToBalance;
+    mapping(address => uint256) private _userToBalance;
     event DepositToken(address from, uint256 amount);
 
     constructor(address token) public {
         _token = IERC20(token);
     }
 
-    function depositToken(uint256 amount) public {
+    function depositToken(uint256 amount) external {
         _userToBalance[msg.sender] = _userToBalance[msg.sender].add(amount);
         require(
             _token.transferFrom(msg.sender, address(this), amount),
