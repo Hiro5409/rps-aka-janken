@@ -39,7 +39,7 @@ contract GameFactory {
     }
 
     function createGame(uint256 betAmount, bytes32 hostHandHashed)
-        public
+        external
         isSufficientMinimumBetAmount(betAmount)
         isDepositedTokens(betAmount)
     {
