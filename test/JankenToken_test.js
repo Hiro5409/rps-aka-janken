@@ -46,7 +46,7 @@ contract("JankenToken", accounts => {
         await jankenToken.mint(host, mintAmount,{ from: host });
         assert.fail("minting was not restricted to master");
       } catch (e) {
-        const expected = "Caller is not a minter";
+        const expected = "Caller is not a admin";
         const actual = e.reason;
         assert.equal(actual, expected, "should not be permitted");
       }
@@ -75,7 +75,7 @@ contract("JankenToken", accounts => {
         await jankenToken.burn(host, burnAmount,{ from: host });
         assert.fail("burning was not restricted to master");
       } catch (e) {
-        const expected = "Caller is not a burner";
+        const expected = "Caller is not a admin";
         const actual = e.reason;
         assert.equal(actual, expected, "should not be permitted");
       }
