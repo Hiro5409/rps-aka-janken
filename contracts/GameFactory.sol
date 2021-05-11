@@ -9,6 +9,17 @@ contract GameFactory {
     IGameBank private _gameBank;
     uint256 private constant _minBetAmount = 5;
     uint256 private constant _timeoutSeconds = 216000;
+    Game[] public _games;
+    struct Game {
+        uint256 id;
+        uint256 betAmount;
+        uint256 timeoutSeconds;
+        address hostAddress;
+        address guestAddress;
+        bytes32 hostHandHashed;
+    }
+
+    event GameCreated(uint256 indexed gameId, address indexed host);
 
     constructor(address gameBankAddress) public {
         _gameBank = IGameBank(gameBankAddress);
@@ -31,5 +42,16 @@ contract GameFactory {
         public
         isSufficientMinimumBetAmount(betAmount)
         isDepositedTokens(betAmount)
-    {}
+    {
+        uint256 gameId = _games.length;
+        Game memory newGame;
+        newGame.id = gameId;
+        newGame.betAmount = betAmount;
+        newGame.timeoutSeconds = _timeoutSeconds;
+        newGame.hostAddress = msg.sender;
+        newGame.hostHandHashed = hostHandHashed;
+        _games.push(newGame);
+
+        emit GameCreated(gameId, msg.sender);
+    }
 }
