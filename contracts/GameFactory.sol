@@ -7,7 +7,8 @@ import "./IGameBank.sol";
 
 contract GameFactory {
     IGameBank private _gameBank;
-    uint256 public constant _minBetAmount = 5;
+    uint256 private constant _minBetAmount = 5;
+    uint256 private constant _timeoutSeconds = 216000;
 
     constructor(address gameBankAddress) public {
         _gameBank = IGameBank(gameBankAddress);
