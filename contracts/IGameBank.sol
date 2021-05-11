@@ -2,4 +2,9 @@
 
 pragma solidity 0.6.8;
 
-interface IGameBank {}
+interface IGameBank {
+    function isDepositedTokens(address from, uint256 amount)
+        external
+        view
+        returns (bool);
+}
