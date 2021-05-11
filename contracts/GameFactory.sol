@@ -18,8 +18,17 @@ contract GameFactory {
         _;
     }
 
+    modifier isDepositedTokens(uint256 _amount) {
+        require(
+            _gameBank.isDepositedTokens(msg.sender, _amount),
+            "Insufficient tokens deposited in GameBank"
+        );
+        _;
+    }
+
     function createGame(uint256 betAmount, bytes32 hostHandHashed)
         public
         isSufficientMinimumBetAmount(betAmount)
+        isDepositedTokens(betAmount)
     {}
 }

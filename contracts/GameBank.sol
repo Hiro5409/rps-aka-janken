@@ -23,4 +23,12 @@ contract GameBank {
         );
         emit DepositToken(msg.sender, amount);
     }
+
+    function isDepositedTokens(address user, uint256 amount)
+        external
+        view
+        returns (bool)
+    {
+        return _userToBalance[user] >= amount;
+    }
 }
