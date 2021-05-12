@@ -1,7 +1,7 @@
 const JankenTokenContract = artifacts.require("JankenToken");
 const GameBankContract = artifacts.require("GameBank");
 const GameFactoryContract = artifacts.require("GameFactory");
-const { MINT_AMOUNT, BET_AMOUNT, HAND, SALT, getHashedHand, STATUS } = require("./helper");
+const { MINT_AMOUNT, BET_AMOUNT, HAND, SALT, getHashedHand, STATUS, setupGame } = require("./helper");
 
 contract("GameFactory", accounts => {
   const master = accounts[0];
@@ -46,9 +46,7 @@ contract("GameFactory", accounts => {
 
   describe("success to create game", () => {
     beforeEach(async () => {
-      await jankenToken.mint(host, MINT_AMOUNT, { from: master });
-      await jankenToken.approve(gameBank.address, BET_AMOUNT, { from: host });
-      await gameBank.depositToken(BET_AMOUNT, { from: host });
+      await setupGame({ jankenToken, gameBank, master, user: host });
     });
 
     it("create new game", async () => {
@@ -70,9 +68,7 @@ contract("GameFactory", accounts => {
     let gameId;
 
     beforeEach(async () => {
-      await jankenToken.mint(host, MINT_AMOUNT, { from: master });
-      await jankenToken.approve(gameBank.address, BET_AMOUNT, { from: host });
-      await gameBank.depositToken(BET_AMOUNT, { from: host });
+      await setupGame({ jankenToken, gameBank, master, user: host });
 
       const tx = await factory.createGame(BET_AMOUNT, hostHandHashed, { from: host });
       gameId = tx.logs[0].args.gameId.toNumber();
@@ -101,9 +97,7 @@ contract("GameFactory", accounts => {
     });
 
     it("throws an error when game status is invalid", async () => {
-      await jankenToken.mint(guest, MINT_AMOUNT, { from: master });
-      await jankenToken.approve(gameBank.address, BET_AMOUNT, { from: guest });
-      await gameBank.depositToken(BET_AMOUNT, { from: guest });
+      await setupGame({ jankenToken, gameBank, master, user: guest });
       await factory.joinGame(gameId, HAND.Paper, { from: guest });
 
       try {
@@ -121,12 +115,8 @@ contract("GameFactory", accounts => {
     let gameId;
 
     beforeEach(async () => {
-      await jankenToken.mint(host, MINT_AMOUNT, { from: master });
-      await jankenToken.mint(guest, MINT_AMOUNT, { from: master });
-      await jankenToken.approve(gameBank.address, BET_AMOUNT, { from: host });
-      await jankenToken.approve(gameBank.address, BET_AMOUNT, { from: guest });
-      await gameBank.depositToken(BET_AMOUNT, { from: host });
-      await gameBank.depositToken(BET_AMOUNT, { from: guest });
+      await setupGame({ jankenToken, gameBank, master, user: host });
+      await setupGame({ jankenToken, gameBank, master, user: guest });
 
       const tx = await factory.createGame(BET_AMOUNT, hostHandHashed, { from: host });
       gameId = tx.logs[0].args.gameId.toNumber();

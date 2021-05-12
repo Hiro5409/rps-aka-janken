@@ -28,6 +28,17 @@ const getHashedHand = (hostHand, salt) => web3.utils.soliditySha3(
   }
 );
 
+const setupGame = async ({
+  jankenToken,
+  gameBank,
+  master,
+  user,
+}) => {
+  await jankenToken.mint(user, MINT_AMOUNT, { from: master });
+  await jankenToken.approve(gameBank.address, BET_AMOUNT, { from: user });
+  await gameBank.depositToken(BET_AMOUNT, { from: user });
+};
+
 module.exports = {
   MINT_AMOUNT,
   BET_AMOUNT,
@@ -35,4 +46,5 @@ module.exports = {
   HAND,
   STATUS,
   getHashedHand,
+  setupGame,
 };
