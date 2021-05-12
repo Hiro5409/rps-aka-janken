@@ -39,6 +39,14 @@ contract GameFactory is JankenGame {
         _;
     }
 
+    modifier isNotGameHost(address hostAddress) {
+        require(
+            msg.sender != hostAddress,
+            "host of this game is not authorized"
+        );
+        _;
+    }
+
     function createGame(uint256 betAmount, bytes32 hostHandHashed)
         external
         isSufficientMinimumBetAmount(betAmount)
@@ -58,5 +66,7 @@ contract GameFactory is JankenGame {
 
     function joinGame(uint256 gameId, Hand guestHand)
         external
+        isNotGameHost(_games[gameId].hostAddress)
+        isDepositedTokens(_games[gameId].betAmount)
     {}
 }

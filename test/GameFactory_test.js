@@ -64,4 +64,39 @@ contract("GameFactory", accounts => {
       assert.equal(actual, expected, "events should match");
     });
   });
+
+  describe("fail to join game", () => {
+    let gameId;
+
+    beforeEach(async () => {
+      await jankenToken.mint(host, MINT_AMOUNT, { from: master });
+      await jankenToken.approve(gameBank.address, BET_AMOUNT, { from: host });
+      await gameBank.depositToken(BET_AMOUNT, { from: host });
+
+      const tx = await factory.createGame(BET_AMOUNT, hostHandHashed, { from: host });
+      gameId = tx.logs[0].args.gameId.toNumber();
+    });
+
+    it("throws an error when called by host", async () => {
+      try {
+        await factory.joinGame(gameId, HAND.Paper, { from: host });
+        assert.fail("host cannot join");
+      } catch (e) {
+        const expected = "host of this game is not authorized";
+        const actual = e.reason;
+        assert.equal(actual, expected, "should not be permitted");
+      }
+    });
+
+    it("throws an error when guest's deposited tokens is insufficient", async () => {
+      try {
+        await factory.joinGame(gameId, HAND.Paper, { from: guest });
+        assert.fail("cannot join before deposit");
+      } catch (e) {
+        const expected = "Insufficient token deposited in GameBank";
+        const actual = e.reason;
+        assert.equal(actual, expected, "should not be permitted");
+      }
+    });
+  });
 });
