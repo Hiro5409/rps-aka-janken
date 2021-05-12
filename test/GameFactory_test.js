@@ -1,7 +1,15 @@
 const JankenTokenContract = artifacts.require("JankenToken");
 const GameBankContract = artifacts.require("GameBank");
 const GameFactoryContract = artifacts.require("GameFactory");
-const { MINT_AMOUNT, BET_AMOUNT, HAND, SALT, getHashedHand, STATUS, setupGame } = require("./helper");
+const {
+  BET_AMOUNT,
+  HAND,
+  SALT,
+  getHashedHand,
+  STATUS,
+  setupGame,
+  createGame,
+} = require("./helper");
 
 contract("GameFactory", accounts => {
   const master = accounts[0];
@@ -50,8 +58,7 @@ contract("GameFactory", accounts => {
     });
 
     it("create new game", async () => {
-      const tx = await factory.createGame(BET_AMOUNT, hostHandHashed, { from: host });
-      const gameId = tx.logs[0].args.gameId.toNumber();
+      const gameId = await createGame({ factory, hostHandHashed, host });
       const game = await factory._games(gameId);
       assert(game, "game should be present");;
     });
@@ -69,9 +76,7 @@ contract("GameFactory", accounts => {
 
     beforeEach(async () => {
       await setupGame({ jankenToken, gameBank, master, user: host });
-
-      const tx = await factory.createGame(BET_AMOUNT, hostHandHashed, { from: host });
-      gameId = tx.logs[0].args.gameId.toNumber();
+      gameId = await createGame({ factory, hostHandHashed, host });
     });
 
     it("throws an error when called by host", async () => {
@@ -117,9 +122,7 @@ contract("GameFactory", accounts => {
     beforeEach(async () => {
       await setupGame({ jankenToken, gameBank, master, user: host });
       await setupGame({ jankenToken, gameBank, master, user: guest });
-
-      const tx = await factory.createGame(BET_AMOUNT, hostHandHashed, { from: host });
-      gameId = tx.logs[0].args.gameId.toNumber();
+      gameId = await createGame({ factory, hostHandHashed, host });
     });
 
     it("join the game after deposit", async () => {

@@ -39,6 +39,16 @@ const setupGame = async ({
   await gameBank.depositToken(BET_AMOUNT, { from: user });
 };
 
+const createGame = async ({
+  factory,
+  hostHandHashed,
+  host,
+}) => {
+  const tx = await factory.createGame(BET_AMOUNT, hostHandHashed, { from: host });
+  gameId = tx.logs[0].args.gameId.toNumber();
+  return gameId;
+};
+
 module.exports = {
   MINT_AMOUNT,
   BET_AMOUNT,
@@ -47,4 +57,5 @@ module.exports = {
   STATUS,
   getHashedHand,
   setupGame,
+  createGame,
 };
