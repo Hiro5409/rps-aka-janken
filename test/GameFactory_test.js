@@ -93,7 +93,7 @@ contract("GameFactory", accounts => {
         await factory.joinGame(gameId, HAND.Paper, { from: guest });
         assert.fail("cannot join before deposit");
       } catch (e) {
-        const expected = "Insufficient token deposited in GameBank";
+        const expected = "Insufficient tokens deposited in GameBank";
         const actual = e.reason;
         assert.equal(actual, expected, "should not be permitted");
       }
