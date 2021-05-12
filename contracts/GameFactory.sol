@@ -4,8 +4,9 @@ pragma solidity 0.6.8;
 
 import "./GameBank.sol";
 import "./IGameBank.sol";
+import "./JankenGame.sol";
 
-contract GameFactory {
+contract GameFactory is JankenGame {
     IGameBank private _gameBank;
     uint256 private constant _minBetAmount = 5;
     uint256 private constant _timeoutSeconds = 216000;
@@ -54,4 +55,8 @@ contract GameFactory {
 
         emit GameCreated(gameId, msg.sender);
     }
+
+    function joinGame(uint256 gameId, Hand guestHand)
+        external
+    {}
 }
