@@ -18,9 +18,16 @@ contract GameFactory is JankenGame {
         address hostAddress;
         address guestAddress;
         bytes32 hostHandHashed;
+        Hand hostHand;
+        Hand guestHand;
     }
 
     event GameCreated(uint256 indexed gameId, address indexed host);
+    event GameJoined(
+        uint256 indexed gameId,
+        address indexed guest,
+        Hand guestHand
+    );
 
     constructor(address gameBankAddress) public {
         _gameBank = IGameBank(gameBankAddress);
@@ -68,5 +75,10 @@ contract GameFactory is JankenGame {
         external
         isNotGameHost(_games[gameId].hostAddress)
         isDepositedTokens(_games[gameId].betAmount)
-    {}
+    {
+        Game storage game = _games[gameId];
+        game.guestAddress = msg.sender;
+        game.guestHand = guestHand;
+        emit GameJoined(gameId, msg.sender, guestHand);
+    }
 }

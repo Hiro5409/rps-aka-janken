@@ -6,6 +6,7 @@ const { MINT_AMOUNT, BET_AMOUNT, HAND, SALT, getHashedHand } = require("./helper
 contract("GameFactory", accounts => {
   const master = accounts[0];
   const host = accounts[1];
+  const guest = accounts[2];
   const hostHand = HAND.Rock;
   const hostHandHashed = getHashedHand(hostHand, SALT);
 
@@ -97,6 +98,37 @@ contract("GameFactory", accounts => {
         const actual = e.reason;
         assert.equal(actual, expected, "should not be permitted");
       }
+    });
+  });
+
+  describe("success to join game", () => {
+    let gameId;
+
+    beforeEach(async () => {
+      await jankenToken.mint(host, MINT_AMOUNT, { from: master });
+      await jankenToken.mint(guest, MINT_AMOUNT, { from: master });
+      await jankenToken.approve(gameBank.address, BET_AMOUNT, { from: host });
+      await jankenToken.approve(gameBank.address, BET_AMOUNT, { from: guest });
+      await gameBank.depositToken(BET_AMOUNT, { from: host });
+      await gameBank.depositToken(BET_AMOUNT, { from: guest });
+
+      const tx = await factory.createGame(BET_AMOUNT, hostHandHashed, { from: host });
+      gameId = tx.logs[0].args.gameId.toNumber();
+    });
+
+    it("join the game after deposit", async () => {
+      await factory.joinGame(gameId, HAND.Paper, { from: guest });
+      const game = await factory._games(gameId);
+      const expected = HAND.Paper;
+      const actual = game.guestHand.toNumber();
+      assert.equal(actual, expected, "hand should be same");
+    });
+
+    it("emits the GameJoined event", async () => {
+      const tx = await factory.joinGame(gameId, HAND.Paper, { from: guest });
+      const actual = tx.logs[0].event;
+      const expected = "GameJoined";
+      assert.equal(actual, expected, "events should match");
     });
   });
 });
