@@ -1,7 +1,7 @@
 const JankenTokenContract = artifacts.require("JankenToken");
 const GameBankContract = artifacts.require("GameBank");
 const GameFactoryContract = artifacts.require("GameFactory");
-const { MINT_AMOUNT, BET_AMOUNT, HAND, SALT, getHashedHand } = require("./helper");
+const { MINT_AMOUNT, BET_AMOUNT, HAND, SALT, getHashedHand, STATUS } = require("./helper");
 
 contract("GameFactory", accounts => {
   const master = accounts[0];
@@ -99,6 +99,22 @@ contract("GameFactory", accounts => {
         assert.equal(actual, expected, "should not be permitted");
       }
     });
+
+    it("throws an error when game status is invalid", async () => {
+      await jankenToken.mint(guest, MINT_AMOUNT, { from: master });
+      await jankenToken.approve(gameBank.address, BET_AMOUNT, { from: guest });
+      await gameBank.depositToken(BET_AMOUNT, { from: guest });
+      await factory.joinGame(gameId, HAND.Paper, { from: guest });
+
+      try {
+        await factory.joinGame(gameId, HAND.Paper, { from: guest });
+        assert.fail('cannot join game that has invalid status');
+      } catch (e) {
+        const expected = "status is invalid, required Created";
+        const actual = e.reason;
+        assert.equal(actual, expected, "should not be permitted");
+      }
+    });
   });
 
   describe("success to join game", () => {
@@ -129,6 +145,16 @@ contract("GameFactory", accounts => {
       const actual = tx.logs[0].event;
       const expected = "GameJoined";
       assert.equal(actual, expected, "events should match");
+    });
+
+    it("change game status from Created to Joined", async () => {
+      const prevStatus = (await factory._games(gameId)).status.toNumber();
+      assert.equal(prevStatus, STATUS.Created, "status should be Created");
+
+      await factory.joinGame(gameId, HAND.Paper, { from: guest });
+
+      const nextStatus = (await factory._games(gameId)).status.toNumber();
+      assert.equal(nextStatus, STATUS.Joined, "status should be Joined");
     });
   });
 });

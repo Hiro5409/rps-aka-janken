@@ -8,6 +8,15 @@ const HAND = {
   Scissors: 2,
 };
 
+const STATUS = {
+  Created: 0,
+  Joined: 1,
+  Decided: 2,
+  Tied: 3,
+  Paid: 4,
+  Canceled: 5,
+}
+
 const getHashedHand = (hostHand, salt) => web3.utils.soliditySha3(
   {
     type: 'uint8',
@@ -24,5 +33,6 @@ module.exports = {
   BET_AMOUNT,
   SALT,
   HAND,
+  STATUS,
   getHashedHand,
 };
