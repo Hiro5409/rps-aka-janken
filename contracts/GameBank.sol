@@ -8,7 +8,7 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 contract GameBank {
     using SafeMath for uint256;
     IERC20 private _token;
-    mapping(address => mapping(address => uint256)) private _gameToUserBalance;
+    mapping(address => mapping(address => uint256)) public _gameToUserBalance;
     event DepositToken(address factory, address from, uint256 amount);
 
     constructor(address token) public {
