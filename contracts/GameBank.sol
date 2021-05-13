@@ -11,6 +11,7 @@ contract GameBank {
     IERC20 private _token;
     mapping(address => mapping(address => uint256)) public _gameToUserBalance;
     event DepositToken(address factory, address from, uint256 amount);
+    event WithdrawToken(address factory, address from, uint256 amount);
 
     constructor(address token) public {
         _token = IERC20(token);
@@ -62,5 +63,14 @@ contract GameBank {
         _gameToUserBalance[factory][loser] = _gameToUserBalance[factory][loser]
             .sub(amount);
         require(_token.transfer(winner, amount * 2), "fail to transfer");
+        emit WithdrawToken(factory, winner, amount);
+    }
+
+    function getRefundedStake(address factory, uint256 gameId) external {
+        IGameFactory gameFactory = IGameFactory(factory);
+        require(
+            gameFactory.isGameTied(gameId),
+            "status is invalid, required Tied"
+        );
     }
 }
