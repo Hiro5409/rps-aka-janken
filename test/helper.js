@@ -30,6 +30,7 @@ const getHashedHand = (hostHand, salt) => web3.utils.soliditySha3(
 );
 
 const setupGame = async ({
+  factory,
   jankenToken,
   gameBank,
   master,
@@ -37,7 +38,7 @@ const setupGame = async ({
 }) => {
   await jankenToken.mint(user, MINT_AMOUNT, { from: master });
   await jankenToken.approve(gameBank.address, BET_AMOUNT, { from: user });
-  await gameBank.depositToken(BET_AMOUNT, { from: user });
+  await gameBank.depositToken(factory.address, BET_AMOUNT, { from: user });
 };
 
 const createGame = async ({

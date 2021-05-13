@@ -8,20 +8,23 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 contract GameBank {
     using SafeMath for uint256;
     IERC20 private _token;
-    mapping(address => uint256) private _userToBalance;
-    event DepositToken(address from, uint256 amount);
+    mapping(address => mapping(address => uint256)) private _gameToUserBalance;
+    event DepositToken(address factory, address from, uint256 amount);
 
     constructor(address token) public {
         _token = IERC20(token);
     }
 
-    function depositToken(uint256 amount) external {
-        _userToBalance[msg.sender] = _userToBalance[msg.sender].add(amount);
+    function depositToken(address game, uint256 amount) external {
+        address sender = msg.sender;
+        _gameToUserBalance[game][sender] = _gameToUserBalance[game][sender].add(
+            amount
+        );
         require(
-            _token.transferFrom(msg.sender, address(this), amount),
+            _token.transferFrom(sender, address(this), amount),
             "Failed to transform"
         );
-        emit DepositToken(msg.sender, amount);
+        emit DepositToken(game, sender, amount);
     }
 
     function isDepositedTokens(address user, uint256 amount)
@@ -29,6 +32,6 @@ contract GameBank {
         view
         returns (bool)
     {
-        return _userToBalance[user] >= amount;
+        return _gameToUserBalance[msg.sender][user] >= amount;
     }
 }
