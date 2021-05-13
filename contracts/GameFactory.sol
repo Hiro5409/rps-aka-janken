@@ -82,6 +82,25 @@ contract GameFactory is JankenGame, GameStatus {
         _;
     }
 
+    function isGameDecided(uint256 gameId) external view returns (bool) {
+        Game memory game = _games[gameId];
+        return game.status == Status.Decided;
+    }
+
+    function isGameTied(uint256 gameId) external view returns (bool) {
+        Game memory game = _games[gameId];
+        return game.status == Status.Tied;
+    }
+
+    function isGameWinner(uint256 gameId, address me)
+        external
+        view
+        returns (bool)
+    {
+        Game memory game = _games[gameId];
+        return game.winner == me;
+    }
+
     function createGame(uint256 betAmount, bytes32 hostHandHashed)
         external
         isSufficientMinimumBetAmount(betAmount)
@@ -143,5 +162,14 @@ contract GameFactory is JankenGame, GameStatus {
         game.winner = winner;
         game.loser = loser;
         emit GameJudged(winner, loser);
+    }
+
+    function getResult(uint256 gameId)
+        external
+        view
+        returns (address loser, uint256 amount)
+    {
+        Game memory game = _games[gameId];
+        return (game.loser, game.betAmount);
     }
 }
