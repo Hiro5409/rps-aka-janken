@@ -1,6 +1,7 @@
 const MINT_AMOUNT = 100;
 const BET_AMOUNT = 5;
 const SALT = web3.utils.toHex('Thank you');
+const FAKE_SALT = web3.utils.toHex('Fuck you');
 
 const HAND = {
   Rock: 0,
@@ -53,6 +54,7 @@ module.exports = {
   MINT_AMOUNT,
   BET_AMOUNT,
   SALT,
+  FAKE_SALT,
   HAND,
   STATUS,
   getHashedHand,

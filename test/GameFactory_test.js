@@ -209,4 +209,54 @@ contract("GameFactory", accounts => {
       assert.equal(actual, expected, "events should match");
     });
   });
+
+  describe("game is decided", () => {
+    beforeEach(async () => {
+      await setupGame({ jankenToken, gameBank, master, user: host });
+      await setupGame({ jankenToken, gameBank, master, user: guest });
+      gameId = await createGame({ factory, hostHandHashed, host });
+      await factory.joinGame(gameId, guestHand, { from: guest });
+    });
+
+    it("winner is guest and loser is host", async () => {
+      await factory.revealHostHand(gameId, hostHand, SALT, { from: host })
+      const expectedWinner = guest;
+      const expectedLoser = host;
+      const actualWinner = (await factory._games(gameId)).winner;
+      const actualLoser = (await factory._games(gameId)).loser;
+      assert.equal(actualWinner, expectedWinner, "winner should be guest");
+      assert.equal(actualLoser, expectedLoser, "loser should be host");
+    });
+
+    it("change game status from Joined to Decided", async () => {
+      const prevStatus = (await factory._games(gameId)).status.toNumber();
+      assert.equal(prevStatus, STATUS.Joined, "previous status should be Joined");
+      await factory.revealHostHand(gameId, hostHand, SALT, { from: host })
+      const nextStatus = (await factory._games(gameId)).status.toNumber();
+      assert.equal(nextStatus, STATUS.Decided, "status should be Decided");
+    });
+  });
+
+  describe("game is tied", () => {
+    beforeEach(async () => {
+      await setupGame({ jankenToken, gameBank, master, user: host });
+      await setupGame({ jankenToken, gameBank, master, user: guest });
+      gameId = await createGame({ factory, hostHandHashed: getHashedHand(guestHand, SALT), host });
+      await factory.joinGame(gameId, guestHand, { from: guest });
+      await factory.revealHostHand(gameId, guestHand, SALT, { from: host })
+    });
+
+    it("winner and loser are zero address", async () => {
+      const actualWinner = (await factory._games(gameId)).winner;
+      const actualLoser = (await factory._games(gameId)).loser;
+      const expected = '0x0000000000000000000000000000000000000000';
+      assert.equal(actualWinner, expected, "winner should be zero address");
+      assert.equal(actualLoser, expected, "loser should be zero address");
+    });
+
+    it("change game status from Joined to Tied", async () => {
+      const status = (await factory._games(gameId)).status.toNumber();
+      assert.equal(status, STATUS.Tied, "status should be Decided");
+    });
+  });
 });
