@@ -64,7 +64,10 @@ contract GameBank is IGameBank {
             .sub(amount);
         _gameToUserBalance[factory][loser] = _gameToUserBalance[factory][loser]
             .sub(amount);
+
         require(_token.transfer(winner, amount * 2), "fail to transfer");
+
+        gameFactory.setGameStatus(gameId, Status.Paid);
         emit WithdrawToken(factory, winner, amount);
     }
 

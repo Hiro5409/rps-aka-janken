@@ -33,4 +33,6 @@ interface IGameFactory is IGameStatus, IJankenGame {
         external
         view
         returns (address loser, uint256 amount);
+
+    function setGameStatus(uint256 gameId, Status status) external;
 }

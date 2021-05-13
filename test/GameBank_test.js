@@ -1,7 +1,7 @@
 const GameBankContract = artifacts.require("GameBank");
 const JankenTokenContract = artifacts.require("JankenToken");
 const GameFactoryContract = artifacts.require("GameFactory");
-const { MINT_AMOUNT, BET_AMOUNT, HAND, SALT, getHashedHand, createGame, setupGame } = require("./helper");
+const { MINT_AMOUNT, BET_AMOUNT, HAND, SALT, getHashedHand, createGame, setupGame, STATUS } = require("./helper");
 
 contract("GameBank", accounts => {
   let factory;
@@ -82,11 +82,11 @@ contract("GameBank", accounts => {
       await setupGame({ factory, jankenToken, gameBank, master, user: host });
       await setupGame({ factory, jankenToken, gameBank, master, user: guest });
       gameId = await createGame({ factory, hostHandHashed, host });
-      await factory.joinGame(gameId, guestHand, { from: guest });
     });
 
     it("throws an error when try to get rewards but game status was invalid", async () => {
       try {
+        await factory.joinGame(gameId, guestHand, { from: guest });
         await gameBank.getGameRewards(factory.address, gameId, { from: guest });
         assert.fail("invalid status");
       } catch (e) {
@@ -98,6 +98,7 @@ contract("GameBank", accounts => {
 
     it("throws an error when try to refund but game status was invalid", async () => {
       try {
+        await factory.joinGame(gameId, guestHand, { from: guest });
         await gameBank.getRefundedStake(factory.address, gameId, { from: guest });
         assert.fail("invalid status");
       } catch (e) {
@@ -109,6 +110,7 @@ contract("GameBank", accounts => {
 
     describe("get rewards for winning game", () => {
       beforeEach(async () => {
+        await factory.joinGame(gameId, guestHand, { from: guest });
         await factory.revealHostHand(gameId, hostHand, SALT, { from: host })
       });
 
@@ -156,6 +158,17 @@ contract("GameBank", accounts => {
         const JKTBalanceOfGuestDepositedInBank = (await gameBank._gameToUserBalance(factory.address, guest)).toNumber();
         assert.equal(JKTBalanceOfGuestDepositedInBank, prevJKTBalanceOfGuestDepositedInBank - BET_AMOUNT, "guest's deposit balance should match");
       });
+
+      it("change status from Decided to Paid", async () => {
+        const prevStatus = (await factory._games(gameId)).status.toNumber();
+        assert.equal(prevStatus, STATUS.Decided, "status should be Decided");
+
+        await gameBank.getGameRewards(factory.address, gameId, { from: guest });
+
+        const nextStatus = (await factory._games(gameId)).status.toNumber();
+        assert.equal(nextStatus, STATUS.Paid, "status should be Paid");
+      });
+    });
     });
   });
 });

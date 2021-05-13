@@ -89,6 +89,11 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
         return game.winner == me;
     }
 
+    function setGameStatus(uint256 gameId, Status status) external {
+        Game storage game = _games[gameId];
+        game.status = status;
+    }
+
     function createGame(uint256 betAmount, bytes32 hostHandHashed)
         external
         isSufficientMinimumBetAmount(betAmount)
