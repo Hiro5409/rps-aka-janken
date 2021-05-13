@@ -2,29 +2,17 @@
 
 pragma solidity 0.6.8;
 
+import "./IGameFactory.sol";
 import "./GameBank.sol";
 import "./IGameBank.sol";
 import "./JankenGame.sol";
 import "./GameStatus.sol";
 
-contract GameFactory is JankenGame, GameStatus {
+contract GameFactory is IGameFactory, JankenGame, GameStatus {
     IGameBank private _gameBank;
     uint256 private constant _minBetAmount = 5;
     uint256 private constant _timeoutSeconds = 216000;
     Game[] public _games;
-    struct Game {
-        uint256 id;
-        uint256 betAmount;
-        uint256 timeoutSeconds;
-        address hostAddress;
-        address guestAddress;
-        address winner;
-        address loser;
-        bytes32 hostHandHashed;
-        Hand hostHand;
-        Hand guestHand;
-        Status status;
-    }
 
     event GameCreated(uint256 indexed gameId, address indexed host);
     event GameJoined(

@@ -2,10 +2,9 @@
 
 pragma solidity 0.6.8;
 
-contract JankenGame {
-    enum Hand {Rock, Paper, Scissors}
-    enum Result {Win, Lose, Draw}
+import "./IJankenGame.sol";
 
+contract JankenGame is IJankenGame {
     mapping(Hand => mapping(Hand => Result)) private results;
 
     constructor() public {

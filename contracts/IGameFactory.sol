@@ -2,7 +2,24 @@
 
 pragma solidity 0.6.8;
 
-interface IGameFactory {
+import "./IGameStatus.sol";
+import "./IJankenGame.sol";
+
+interface IGameFactory is IGameStatus, IJankenGame {
+    struct Game {
+        uint256 id;
+        uint256 betAmount;
+        uint256 timeoutSeconds;
+        address hostAddress;
+        address guestAddress;
+        address winner;
+        address loser;
+        bytes32 hostHandHashed;
+        Hand hostHand;
+        Hand guestHand;
+        Status status;
+    }
+
     function isGameDecided(uint256 gameId) external view returns (bool);
 
     function isGameTied(uint256 gameId) external view returns (bool);

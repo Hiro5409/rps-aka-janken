@@ -4,9 +4,10 @@ pragma solidity 0.6.8;
 
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "./IGameBank.sol";
 import "./IGameFactory.sol";
 
-contract GameBank {
+contract GameBank is IGameBank {
     using SafeMath for uint256;
     IERC20 private _token;
     mapping(address => mapping(address => uint256)) public _gameToUserBalance;
@@ -32,6 +33,7 @@ contract GameBank {
     function isDepositedTokens(address user, uint256 amount)
         external
         view
+        override
         returns (bool)
     {
         return _gameToUserBalance[msg.sender][user] >= amount;

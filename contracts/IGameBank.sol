@@ -2,7 +2,9 @@
 
 pragma solidity 0.6.8;
 
-interface IGameBank {
+import "./IGameStatus.sol";
+
+interface IGameBank is IGameStatus {
     function isDepositedTokens(address from, uint256 amount)
         external
         view
