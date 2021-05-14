@@ -70,12 +70,4 @@ contract GameBank is IGameBank {
         gameFactory.setGameStatus(gameId, Status.Paid);
         emit WithdrawToken(factory, winner, amount);
     }
-
-    function getRefundedStake(address factory, uint256 gameId) external {
-        IGameFactory gameFactory = IGameFactory(factory);
-        require(
-            gameFactory.isGameTied(gameId),
-            "status is invalid, required Tied"
-        );
-    }
 }

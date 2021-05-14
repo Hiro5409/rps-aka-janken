@@ -96,28 +96,16 @@ contract("GameBank", accounts => {
       }
     });
 
-    it("throws an error when try to refund but game status was invalid", async () => {
-      try {
-        await factory.joinGame(gameId, guestHand, { from: guest });
-        await gameBank.getRefundedStake(factory.address, gameId, { from: guest });
-        assert.fail("invalid status");
-      } catch (e) {
-        const expected = "status is invalid, required Tied";
-        const actual = e.reason;
-        assert.equal(actual, expected, "should not be permitted");
-      }
-    });
-
     describe("get rewards for winning game", () => {
       beforeEach(async () => {
         await factory.joinGame(gameId, guestHand, { from: guest });
-        await factory.revealHostHand(gameId, hostHand, SALT, { from: host })
+        await factory.revealHostHand(gameId, hostHand, SALT, { from: host });
       });
 
       it("throws an error when loser try to get rewards", async () => {
         try {
           await gameBank.getGameRewards(factory.address, gameId, { from: host });
-          assert.fail("you are loser");
+          assert.fail("cannot call by loser");
         } catch (e) {
           const expected = "you are loser";
           const actual = e.reason;
@@ -168,7 +156,6 @@ contract("GameBank", accounts => {
         const nextStatus = (await factory._games(gameId)).status.toNumber();
         assert.equal(nextStatus, STATUS.Paid, "status should be Paid");
       });
-    });
     });
   });
 });
