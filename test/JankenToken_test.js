@@ -1,4 +1,5 @@
 const JankenTokenContract = artifacts.require("JankenToken");
+const GameBankContract = artifacts.require("GameBank");
 
 contract("JankenToken: deployed", accounts => {
   it("it has been deployed", async () => {
@@ -21,11 +22,15 @@ contract("JankenToken: deployed", accounts => {
 
 contract("JankenToken", accounts => {
   let jankenToken;
+  let gameBank;
+  let gameBankAddress;
   const master = accounts[0];
   const host = accounts[1];
 
   beforeEach(async () => {
     jankenToken = await JankenTokenContract.new();
+    gameBank = await GameBankContract.new(jankenToken.address);
+    gameBankAddress = gameBank.address;
   });
 
   describe("minting", () => {
@@ -79,6 +84,19 @@ contract("JankenToken", accounts => {
         const actual = e.reason;
         assert.equal(actual, expected, "should not be permitted");
       }
+    });
+  });
+
+  describe("approve", () => {
+    const approveAmount = 10;
+
+    it("approve", async () => {
+      const previousAllowance = (await jankenToken.allowance(host, gameBankAddress)).toNumber();
+      await jankenToken.approve(gameBankAddress, approveAmount, { from: host });
+      const nextAllowance = (await jankenToken.allowance(host, gameBankAddress)).toNumber();
+      const expected = approveAmount;
+      const actual = nextAllowance - previousAllowance;
+      assert.equal(actual, expected, "approved amount should match");
     });
   });
 });
