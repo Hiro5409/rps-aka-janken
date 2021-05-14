@@ -70,12 +70,17 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
         _;
     }
 
-    function isGameDecided(uint256 gameId) external view returns (bool) {
+    function isGameDecided(uint256 gameId)
+        external
+        view
+        override
+        returns (bool)
+    {
         Game memory game = _games[gameId];
         return game.status == Status.Decided;
     }
 
-    function isGameTied(uint256 gameId) external view returns (bool) {
+    function isGameTied(uint256 gameId) external view override returns (bool) {
         Game memory game = _games[gameId];
         return game.status == Status.Tied;
     }
@@ -83,13 +88,14 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
     function isGameWinner(uint256 gameId, address me)
         external
         view
+        override
         returns (bool)
     {
         Game memory game = _games[gameId];
         return game.winner == me;
     }
 
-    function setGameStatus(uint256 gameId, Status status) external {
+    function setGameStatus(uint256 gameId, Status status) external override {
         Game storage game = _games[gameId];
         game.status = status;
     }
@@ -160,6 +166,7 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
     function getResult(uint256 gameId)
         external
         view
+        override
         returns (address loser, uint256 amount)
     {
         Game memory game = _games[gameId];
