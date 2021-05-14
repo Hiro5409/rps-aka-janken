@@ -18,6 +18,8 @@ contract GameFactory is JankenGame, GameStatus {
         uint256 timeoutSeconds;
         address hostAddress;
         address guestAddress;
+        address winner;
+        address loser;
         bytes32 hostHandHashed;
         Hand hostHand;
         Hand guestHand;
@@ -30,6 +32,8 @@ contract GameFactory is JankenGame, GameStatus {
         address indexed guest,
         Hand guestHand
     );
+    event GameRevealed(Hand hostHand);
+    event GameJudged(address indexed winner, address indexed loser);
 
     constructor(address gameBankAddress) public {
         _gameBank = IGameBank(gameBankAddress);
@@ -52,6 +56,28 @@ contract GameFactory is JankenGame, GameStatus {
         require(
             msg.sender != hostAddress,
             "host of this game is not authorized"
+        );
+        _;
+    }
+
+    modifier isGameHost(address hostAddress) {
+        require(
+            msg.sender == hostAddress,
+            "host of this game is only authorized"
+        );
+        _;
+    }
+
+    modifier isValidHand(
+        Hand hostHand,
+        bytes32 salt,
+        bytes32 previousHostHandHashed
+    ) {
+        bytes32 currentHostHandHashed =
+            keccak256(abi.encodePacked(hostHand, salt));
+        require(
+            currentHostHandHashed == previousHostHandHashed,
+            "cannot change hand or salt later out"
         );
         _;
     }
@@ -85,5 +111,37 @@ contract GameFactory is JankenGame, GameStatus {
         game.guestHand = guestHand;
         game.status = Status.Joined;
         emit GameJoined(gameId, msg.sender, guestHand);
+    }
+
+    function revealHostHand(
+        uint256 gameId,
+        Hand hostHand,
+        bytes32 salt
+    )
+        external
+        isGameHost(_games[gameId].hostAddress)
+        isStatusJoined(_games[gameId].status)
+        isValidHand(hostHand, salt, _games[gameId].hostHandHashed)
+    {
+        Game storage game = _games[gameId];
+        game.hostHand = hostHand;
+        emit GameRevealed(hostHand);
+        judge(gameId);
+    }
+
+    function judge(uint256 gameId) private {
+        Game storage game = _games[gameId];
+        (address winner, address loser) =
+            playGame(
+                game.hostAddress,
+                game.hostHand,
+                game.guestAddress,
+                game.guestHand
+            );
+
+        game.status = (winner == loser ? Status.Tied : Status.Decided);
+        game.winner = winner;
+        game.loser = loser;
+        emit GameJudged(winner, loser);
     }
 }
