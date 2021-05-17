@@ -8,8 +8,5 @@ interface IGameBank is IGameStatus {
     event DepositTokens(address factory, address from, uint256 amount);
     event WithdrawTokens(address factory, address from, uint256 amount);
 
-    function isDepositedTokens(address from, uint256 amount)
-        external
-        view
-        returns (bool);
+    function betTokensAsStake(address user, uint256 amount) external;
 }

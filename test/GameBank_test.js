@@ -24,7 +24,7 @@ contract("GameBank", accounts => {
       await jankenToken.approve(gameBankAddress, BET_AMOUNT - 1, { from: host });
 
       try {
-        await gameBank.depositToken(factory.address, BET_AMOUNT, { from: host });
+        await gameBank.depositTokens(factory.address, BET_AMOUNT, { from: host });
         assert.fail("exceed amount of allowance");
       } catch (e) {
         const expected = "ERC20: transfer amount exceeds allowance";
@@ -38,7 +38,7 @@ contract("GameBank", accounts => {
       await jankenToken.approve(gameBankAddress, BET_AMOUNT, { from: host });
 
       try {
-        await gameBank.depositToken(factory.address, BET_AMOUNT, { from: host });
+        await gameBank.depositTokens(factory.address, BET_AMOUNT, { from: host });
         assert.fail("exceed amount of balance");
       } catch (e) {
         const expected = "ERC20: transfer amount exceeds balance";
@@ -52,10 +52,10 @@ contract("GameBank", accounts => {
       await jankenToken.approve(gameBankAddress, BET_AMOUNT, { from: host });
 
       const currentJKTBalance = (await jankenToken.balanceOf(gameBankAddress)).toNumber();
-      const currentDepositedBalance = (await gameBank._gameToUserBalance(factory.address, host)).toNumber();
-      await gameBank.depositToken(factory.address, BET_AMOUNT, { from: host });
+      const currentDepositedBalance = (await gameBank._gameUserBalanceDeposited(factory.address, host)).toNumber();
+      await gameBank.depositTokens(factory.address, BET_AMOUNT, { from: host });
       const newJKTBalance = (await jankenToken.balanceOf(gameBankAddress)).toNumber();
-      const newDepositedBalance = (await gameBank._gameToUserBalance(factory.address, host)).toNumber();
+      const newDepositedBalance = (await gameBank._gameUserBalanceDeposited(factory.address, host)).toNumber();
 
       const actualJKT = newJKTBalance - currentJKTBalance;
       const expectedJKT = BET_AMOUNT;
@@ -66,11 +66,11 @@ contract("GameBank", accounts => {
       assert.equal(actualDepositedBalance, expectedDepositedBalance, "balance of jkt should increment by bet amount");
     });
 
-    it("emits the DepositToken event", async () => {
+    it("emits the DepositTokens event", async () => {
       await jankenToken.mint(host, MINT_AMOUNT, { from: master });
       await jankenToken.approve(gameBankAddress, BET_AMOUNT, { from: host });
 
-      const tx = await gameBank.depositToken(factory.address, BET_AMOUNT, { from: host });
+      const tx = await gameBank.depositTokens(factory.address, BET_AMOUNT, { from: host });
       const actual = tx.logs[0].event;
       const expected = "DepositTokens";
       assert.equal(actual, expected, "events should match");
@@ -81,7 +81,7 @@ contract("GameBank", accounts => {
     beforeEach(async () => {
       await jankenToken.mint(host, MINT_AMOUNT, { from: master });
       await jankenToken.approve(gameBankAddress, BET_AMOUNT, { from: host });
-      await gameBank.depositToken(factory.address, BET_AMOUNT, { from: host });
+      await gameBank.depositTokens(factory.address, BET_AMOUNT, { from: host });
     });
 
     it("throws an error when withdraw amount exceeds balance", async () => {
@@ -96,9 +96,9 @@ contract("GameBank", accounts => {
     });
 
     it("withdraw all tokens deposited", async () => {
-      const currentDepositedBalance = (await gameBank._gameToUserBalance(factory.address, host)).toNumber();
+      const currentDepositedBalance = (await gameBank._gameUserBalanceDeposited(factory.address, host)).toNumber();
       await gameBank.withdrawTokens(factory.address, BET_AMOUNT, { from: host });
-      const newDepositedBalance = (await gameBank._gameToUserBalance(factory.address, host)).toNumber();
+      const newDepositedBalance = (await gameBank._gameUserBalanceDeposited(factory.address, host)).toNumber();
 
       const actual = newDepositedBalance;
       const expected = currentDepositedBalance - BET_AMOUNT;

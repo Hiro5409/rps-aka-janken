@@ -32,11 +32,8 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
         _;
     }
 
-    modifier isDepositedTokens(uint256 _amount) {
-        require(
-            _gameBank.isDepositedTokens(msg.sender, _amount),
-            "Insufficient tokens deposited in GameBank"
-        );
+    modifier betTokens(uint256 _amount) {
+        _gameBank.betTokensAsStake(msg.sender, _amount);
         _;
     }
 
@@ -103,7 +100,7 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
     function createGame(uint256 betAmount, bytes32 hostHandHashed)
         external
         isSufficientMinimumBetAmount(betAmount)
-        isDepositedTokens(betAmount)
+        betTokens(betAmount)
     {
         uint256 gameId = _games.length;
         Game memory newGame =
@@ -128,8 +125,8 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
     function joinGame(uint256 gameId, Hand guestHand)
         external
         isNotGameHost(_games[gameId].hostAddress)
-        isDepositedTokens(_games[gameId].betAmount)
         isStatusCreated(_games[gameId].status)
+        betTokens(_games[gameId].betAmount)
     {
         Game storage game = _games[gameId];
         game.guestAddress = msg.sender;
