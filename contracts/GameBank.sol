@@ -11,8 +11,6 @@ contract GameBank is IGameBank {
     using SafeMath for uint256;
     IERC20 private _token;
     mapping(address => mapping(address => uint256)) public _gameToUserBalance;
-    event DepositToken(address factory, address from, uint256 amount);
-    event WithdrawToken(address factory, address from, uint256 amount);
 
     constructor(address token) public {
         _token = IERC20(token);
@@ -27,7 +25,7 @@ contract GameBank is IGameBank {
             _token.transferFrom(sender, address(this), amount),
             "Failed to transform"
         );
-        emit DepositToken(game, sender, amount);
+        emit DepositTokens(game, sender, amount);
     }
 
     function isDepositedTokens(address user, uint256 amount)
