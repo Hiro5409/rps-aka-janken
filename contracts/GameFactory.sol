@@ -106,13 +106,20 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
         isDepositedTokens(betAmount)
     {
         uint256 gameId = _games.length;
-        Game memory newGame;
-        newGame.id = gameId;
-        newGame.betAmount = betAmount;
-        newGame.timeoutSeconds = _timeoutSeconds;
-        newGame.hostAddress = msg.sender;
-        newGame.hostHandHashed = hostHandHashed;
-        newGame.status = Status.Created;
+        Game memory newGame =
+            Game({
+                id: gameId,
+                betAmount: betAmount,
+                timeoutSeconds: _timeoutSeconds,
+                hostAddress: msg.sender,
+                guestAddress: address(0),
+                winner: address(0),
+                loser: address(0),
+                hostHandHashed: hostHandHashed,
+                hostHand: Hand.None,
+                guestHand: Hand.None,
+                status: Status.Created
+            });
         _games.push(newGame);
 
         emit GameCreated(gameId, msg.sender);

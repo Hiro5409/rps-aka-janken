@@ -4,9 +4,10 @@ const SALT = web3.utils.toHex('Thank you');
 const FAKE_SALT = web3.utils.toHex('Fuck you');
 
 const HAND = {
-  Rock: 0,
-  Paper: 1,
-  Scissors: 2,
+  None: 0,
+  Rock: 1,
+  Paper: 2,
+  Scissors: 3,
 };
 
 const STATUS = {
