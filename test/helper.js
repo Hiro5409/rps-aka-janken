@@ -4,9 +4,10 @@ const SALT = web3.utils.toHex('Thank you');
 const FAKE_SALT = web3.utils.toHex('Fuck you');
 
 const HAND = {
-  Rock: 0,
-  Paper: 1,
-  Scissors: 2,
+  None: 0,
+  Rock: 1,
+  Paper: 2,
+  Scissors: 3,
 };
 
 const STATUS = {
@@ -30,6 +31,7 @@ const getHashedHand = (hostHand, salt) => web3.utils.soliditySha3(
 );
 
 const setupGame = async ({
+  factory,
   jankenToken,
   gameBank,
   master,
@@ -37,7 +39,7 @@ const setupGame = async ({
 }) => {
   await jankenToken.mint(user, MINT_AMOUNT, { from: master });
   await jankenToken.approve(gameBank.address, BET_AMOUNT, { from: user });
-  await gameBank.depositToken(BET_AMOUNT, { from: user });
+  await gameBank.depositTokens(factory.address, BET_AMOUNT, { from: user });
 };
 
 const createGame = async ({

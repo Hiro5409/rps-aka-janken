@@ -2,29 +2,17 @@
 
 pragma solidity 0.6.8;
 
+import "./IGameFactory.sol";
 import "./GameBank.sol";
 import "./IGameBank.sol";
 import "./JankenGame.sol";
 import "./GameStatus.sol";
 
-contract GameFactory is JankenGame, GameStatus {
+contract GameFactory is IGameFactory, JankenGame, GameStatus {
     IGameBank private _gameBank;
     uint256 private constant _minBetAmount = 5;
     uint256 private constant _timeoutSeconds = 216000;
     Game[] public _games;
-    struct Game {
-        uint256 id;
-        uint256 betAmount;
-        uint256 timeoutSeconds;
-        address hostAddress;
-        address guestAddress;
-        address winner;
-        address loser;
-        bytes32 hostHandHashed;
-        Hand hostHand;
-        Hand guestHand;
-        Status status;
-    }
 
     event GameCreated(uint256 indexed gameId, address indexed host);
     event GameJoined(
@@ -44,11 +32,8 @@ contract GameFactory is JankenGame, GameStatus {
         _;
     }
 
-    modifier isDepositedTokens(uint256 _amount) {
-        require(
-            _gameBank.isDepositedTokens(msg.sender, _amount),
-            "Insufficient tokens deposited in GameBank"
-        );
+    modifier betTokens(uint256 _amount) {
+        _gameBank.betTokensAsStake(msg.sender, _amount);
         _;
     }
 
@@ -82,19 +67,56 @@ contract GameFactory is JankenGame, GameStatus {
         _;
     }
 
+    function isGameDecided(uint256 gameId)
+        external
+        view
+        override
+        returns (bool)
+    {
+        Game memory game = _games[gameId];
+        return game.status == Status.Decided;
+    }
+
+    function isGameTied(uint256 gameId) external view override returns (bool) {
+        Game memory game = _games[gameId];
+        return game.status == Status.Tied;
+    }
+
+    function isGameWinner(uint256 gameId, address me)
+        external
+        view
+        override
+        returns (bool)
+    {
+        Game memory game = _games[gameId];
+        return game.winner == me;
+    }
+
+    function setGameStatus(uint256 gameId, Status status) external override {
+        Game storage game = _games[gameId];
+        game.status = status;
+    }
+
     function createGame(uint256 betAmount, bytes32 hostHandHashed)
         external
         isSufficientMinimumBetAmount(betAmount)
-        isDepositedTokens(betAmount)
+        betTokens(betAmount)
     {
         uint256 gameId = _games.length;
-        Game memory newGame;
-        newGame.id = gameId;
-        newGame.betAmount = betAmount;
-        newGame.timeoutSeconds = _timeoutSeconds;
-        newGame.hostAddress = msg.sender;
-        newGame.hostHandHashed = hostHandHashed;
-        newGame.status = Status.Created;
+        Game memory newGame =
+            Game({
+                id: gameId,
+                betAmount: betAmount,
+                timeoutSeconds: _timeoutSeconds,
+                hostAddress: msg.sender,
+                guestAddress: address(0),
+                winner: address(0),
+                loser: address(0),
+                hostHandHashed: hostHandHashed,
+                hostHand: Hand.None,
+                guestHand: Hand.None,
+                status: Status.Created
+            });
         _games.push(newGame);
 
         emit GameCreated(gameId, msg.sender);
@@ -103,8 +125,8 @@ contract GameFactory is JankenGame, GameStatus {
     function joinGame(uint256 gameId, Hand guestHand)
         external
         isNotGameHost(_games[gameId].hostAddress)
-        isDepositedTokens(_games[gameId].betAmount)
         isStatusCreated(_games[gameId].status)
+        betTokens(_games[gameId].betAmount)
     {
         Game storage game = _games[gameId];
         game.guestAddress = msg.sender;
@@ -143,5 +165,15 @@ contract GameFactory is JankenGame, GameStatus {
         game.winner = winner;
         game.loser = loser;
         emit GameJudged(winner, loser);
+    }
+
+    function getResult(uint256 gameId)
+        external
+        view
+        override
+        returns (address loser, uint256 amount)
+    {
+        Game memory game = _games[gameId];
+        return (game.loser, game.betAmount);
     }
 }

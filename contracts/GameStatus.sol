@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 
+import "./IGameStatus.sol";
+
 pragma solidity 0.6.8;
 
-contract GameStatus {
-    enum Status {Created, Joined, Decided, Tied, Paid, Canceled}
-
+contract GameStatus is IGameStatus {
     modifier isStatusCreated(Status status) {
         require(
             status == Status.Created,

@@ -56,13 +56,31 @@ contract("GameFactory", accounts => {
 
   describe("success to create game", () => {
     beforeEach(async () => {
-      await setupGame({ jankenToken, gameBank, master, user: host });
+      await setupGame({ factory, jankenToken, gameBank, master, user: host });
     });
 
     it("create new game", async () => {
       const gameId = await createGame({ factory, hostHandHashed, host });
       const game = await factory._games(gameId);
       assert(game, "game should be present");;
+    });
+
+    it("decrease deposited balance in bank", async () => {
+      const currentDepositedBalance = (await gameBank._gameUserBalanceDeposited(factory.address, host)).toNumber();
+      await createGame({ factory, hostHandHashed, host });
+      const newDepositedBalance = (await gameBank._gameUserBalanceDeposited(factory.address, host)).toNumber();
+      const actual = newDepositedBalance;
+      const expected = currentDepositedBalance - BET_AMOUNT;
+      assert.equal(actual, expected, "should match balance");
+    });
+
+    it("increase game staking balance in bank", async () => {
+      const currentDepositedBalance = (await gameBank._gameUserBalanceStake(factory.address, host)).toNumber();
+      await createGame({ factory, hostHandHashed, host });
+      const newDepositedBalance = (await gameBank._gameUserBalanceStake(factory.address, host)).toNumber();
+      const actual = newDepositedBalance;
+      const expected = currentDepositedBalance + BET_AMOUNT;
+      assert.equal(actual, expected, "should match balance");
     });
 
     it("emits the GameCreated event", async () => {
@@ -77,7 +95,7 @@ contract("GameFactory", accounts => {
     let gameId;
 
     beforeEach(async () => {
-      await setupGame({ jankenToken, gameBank, master, user: host });
+      await setupGame({ factory, jankenToken, gameBank, master, user: host });
       gameId = await createGame({ factory, hostHandHashed, host });
     });
 
@@ -104,7 +122,7 @@ contract("GameFactory", accounts => {
     });
 
     it("throws an error when game status is invalid", async () => {
-      await setupGame({ jankenToken, gameBank, master, user: guest });
+      await setupGame({ factory, jankenToken, gameBank, master, user: guest });
       await factory.joinGame(gameId, guestHand, { from: guest });
 
       try {
@@ -122,8 +140,8 @@ contract("GameFactory", accounts => {
     let gameId;
 
     beforeEach(async () => {
-      await setupGame({ jankenToken, gameBank, master, user: host });
-      await setupGame({ jankenToken, gameBank, master, user: guest });
+      await setupGame({ factory, jankenToken, gameBank, master, user: host });
+      await setupGame({ factory, jankenToken, gameBank, master, user: guest });
       gameId = await createGame({ factory, hostHandHashed, host });
     });
 
@@ -155,8 +173,8 @@ contract("GameFactory", accounts => {
 
   describe("reveal host hand", () => {
     beforeEach(async () => {
-      await setupGame({ jankenToken, gameBank, master, user: host });
-      await setupGame({ jankenToken, gameBank, master, user: guest });
+      await setupGame({ factory, jankenToken, gameBank, master, user: host });
+      await setupGame({ factory, jankenToken, gameBank, master, user: guest });
       gameId = await createGame({ factory, hostHandHashed, host });
       await factory.joinGame(gameId, guestHand, { from: guest });
     });
@@ -212,8 +230,8 @@ contract("GameFactory", accounts => {
 
   describe("game is decided", () => {
     beforeEach(async () => {
-      await setupGame({ jankenToken, gameBank, master, user: host });
-      await setupGame({ jankenToken, gameBank, master, user: guest });
+      await setupGame({ factory, jankenToken, gameBank, master, user: host });
+      await setupGame({ factory, jankenToken, gameBank, master, user: guest });
       gameId = await createGame({ factory, hostHandHashed, host });
       await factory.joinGame(gameId, guestHand, { from: guest });
     });
@@ -239,8 +257,8 @@ contract("GameFactory", accounts => {
 
   describe("game is tied", () => {
     beforeEach(async () => {
-      await setupGame({ jankenToken, gameBank, master, user: host });
-      await setupGame({ jankenToken, gameBank, master, user: guest });
+      await setupGame({ factory, jankenToken, gameBank, master, user: host });
+      await setupGame({ factory, jankenToken, gameBank, master, user: guest });
       gameId = await createGame({ factory, hostHandHashed: getHashedHand(guestHand, SALT), host });
       await factory.joinGame(gameId, guestHand, { from: guest });
       await factory.revealHostHand(gameId, guestHand, SALT, { from: host })
