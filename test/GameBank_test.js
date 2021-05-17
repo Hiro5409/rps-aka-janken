@@ -174,19 +174,19 @@ contract("GameBank", accounts => {
       it("deposited balance of winner increases and stake decreases", async () => {
         const rewardsAmount = BET_AMOUNT * 2;
         const currentDepositedBalance = (await gameBank._gameUserBalanceDeposited(factory.address, guest)).toNumber();
-        const currentStakeBalance = (await gameBank._gameUserBalanceStake(factory.address, guest)).toNumber();
+        const currentStakeBalance = (await gameBank._gameGameIdUserBalanceStake(factory.address, gameId, guest)).toNumber();
         await gameBank.getGameRewards(factory.address, gameId, { from: guest });
         const newDepositedBalance = (await gameBank._gameUserBalanceDeposited(factory.address, guest)).toNumber();
-        const newStakeBalance = (await gameBank._gameUserBalanceStake(factory.address, guest)).toNumber();
+        const newStakeBalance = (await gameBank._gameGameIdUserBalanceStake(factory.address, gameId, guest)).toNumber();
 
         assert.equal(newDepositedBalance, currentDepositedBalance + rewardsAmount, "balance should match");
         assert.equal(newStakeBalance, currentStakeBalance - BET_AMOUNT, "balance should match");
       });
 
       it("stake balance of loser decreases", async () => {
-        const currentStakeBalance = (await gameBank._gameUserBalanceStake(factory.address, host)).toNumber();
+        const currentStakeBalance = (await gameBank._gameGameIdUserBalanceStake(factory.address, gameId, host)).toNumber();
         await gameBank.getGameRewards(factory.address, gameId, { from: guest });
-        const newStakeBalance = (await gameBank._gameUserBalanceStake(factory.address, host)).toNumber();
+        const newStakeBalance = (await gameBank._gameGameIdUserBalanceStake(factory.address, gameId, host)).toNumber();
 
         assert.equal(newStakeBalance, currentStakeBalance - BET_AMOUNT, "balance should match");
       });
