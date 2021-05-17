@@ -37,8 +37,8 @@ contract GameBank is IGameBank {
         return _gameToUserBalance[msg.sender][user] >= amount;
     }
 
-    function getGameRewards(address factory, uint256 gameId) external {
-        IGameFactory gameFactory = IGameFactory(factory);
+    function getGameRewards(address game, uint256 gameId) external {
+        IGameFactory gameFactory = IGameFactory(game);
         require(
             gameFactory.isGameDecided(gameId),
             "status is invalid, required Decided"
@@ -49,19 +49,19 @@ contract GameBank is IGameBank {
         (address loser, uint256 amount) = gameFactory.getResult(gameId);
 
         require(
-            _gameToUserBalance[factory][winner] >= amount,
+            _gameToUserBalance[game][winner] >= amount,
             "winner should deposit stakes in advance"
         );
         require(
-            _gameToUserBalance[factory][loser] >= amount,
+            _gameToUserBalance[game][loser] >= amount,
             "loser should deposit stakes in advance"
         );
-        _gameToUserBalance[factory][winner] = _gameToUserBalance[factory][
-            winner
-        ]
-            .sub(amount);
-        _gameToUserBalance[factory][loser] = _gameToUserBalance[factory][loser]
-            .sub(amount);
+        _gameToUserBalance[game][winner] = _gameToUserBalance[game][winner].sub(
+            amount
+        );
+        _gameToUserBalance[game][loser] = _gameToUserBalance[game][loser].sub(
+            amount
+        );
 
         require(_token.transfer(winner, amount * 2), "fail to transfer");
 
