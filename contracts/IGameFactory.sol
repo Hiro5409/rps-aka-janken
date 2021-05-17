@@ -29,10 +29,21 @@ interface IGameFactory is IGameStatus, IJankenGame {
         view
         returns (bool);
 
+    function isGamePlayer(uint256 gameId, address me)
+        external
+        view
+        returns (bool);
+
     function getResult(uint256 gameId)
         external
         view
-        returns (address loser, uint256 amount);
+        returns (
+            address winner,
+            address loser,
+            address host,
+            address guest,
+            uint256 amount
+        );
 
     function setGameStatus(uint256 gameId, Status status) external;
 }

@@ -96,6 +96,36 @@ contract GameBank is IGameBank {
         gameFactory.setGameStatus(gameId, Status.Paid);
     }
 
+    function refundTokens(address game, uint256 gameId) external {
+        IGameFactory gameFactory = IGameFactory(game);
+        require(
+            gameFactory.isGameTied(gameId),
+            "status is invalid, required Tied"
+        );
+        address player = msg.sender;
+        require(gameFactory.isGamePlayer(gameId, player), "you are not player");
+
+        (, , address host, address guest, uint256 amount) =
+            gameFactory.getResult(gameId);
+
+        uint256 depositedBalance = _gameUserBalanceDeposited[game][player];
+        uint256 stakeBalance =
+            _gameGameIdUserBalanceStake[game][gameId][player];
+
+        require(stakeBalance >= amount, "you have no balance of game stake");
+        _gameGameIdUserBalanceStake[game][gameId][player] = stakeBalance.sub(
+            amount
+        );
+        _gameUserBalanceDeposited[game][player] = depositedBalance.add(amount);
+
+        if (
+            _gameGameIdUserBalanceStake[game][gameId][host] == 0 &&
+            _gameGameIdUserBalanceStake[game][gameId][guest] == 0
+        ) {
+            gameFactory.setGameStatus(gameId, Status.Paid);
+        }
+    }
+
     function withdrawTokens(address game, uint256 withdrawAmount) external {
         uint256 depositedBalance = _gameUserBalanceDeposited[game][msg.sender];
         require(

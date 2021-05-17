@@ -95,6 +95,16 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
         return game.winner == me;
     }
 
+    function isGamePlayer(uint256 gameId, address me)
+        external
+        view
+        override
+        returns (bool)
+    {
+        Game memory game = _games[gameId];
+        return game.hostAddress == me || game.guestAddress == me;
+    }
+
     function setGameStatus(uint256 gameId, Status status) external override {
         Game storage game = _games[gameId];
         game.status = status;
@@ -176,9 +186,21 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
         external
         view
         override
-        returns (address loser, uint256 amount)
+        returns (
+            address winner,
+            address loser,
+            address host,
+            address guest,
+            uint256 amount
+        )
     {
         Game memory game = _games[gameId];
-        return (game.loser, game.betAmount);
+        return (
+            game.winner,
+            game.loser,
+            game.hostAddress,
+            game.guestAddress,
+            game.betAmount
+        );
     }
 }

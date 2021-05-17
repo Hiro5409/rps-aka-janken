@@ -202,4 +202,81 @@ contract("GameBank", accounts => {
       });
     });
   });
+
+  describe("refund", () => {
+    let gameId;
+    const guest = accounts[2];
+    const hostHand = HAND.Rock;
+    const hostHandHashed = getHashedHand(hostHand, SALT);
+    const guestHand = HAND.Rock;
+
+    beforeEach(async () => {
+      await setupGame({ factory, jankenToken, gameBank, master, user: host });
+      await setupGame({ factory, jankenToken, gameBank, master, user: guest });
+      gameId = await createGame({ factory, hostHandHashed, host });
+    });
+
+    it("throws an error when try to refund but game status was invalid", async () => { try {
+        await factory.joinGame(gameId, guestHand, { from: guest });
+        await gameBank.refundTokens(factory.address, gameId, { from: guest });
+        assert.fail("invalid status");
+      } catch (e) {
+        const expected = "status is invalid, required Tied";
+        const actual = e.reason;
+        assert.equal(actual, expected, "should not be permitted");
+      }
+    });
+
+    describe("refund tokens for tying game", () => {
+      beforeEach(async () => {
+        await factory.joinGame(gameId, guestHand, { from: guest });
+        await factory.revealHostHand(gameId, hostHand, SALT, { from: host });
+      });
+
+      it("throws an error when non player try to refund", async () => {
+        const nonPlayer = accounts[3];
+        try {
+          await gameBank.refundTokens(factory.address, gameId, { from: nonPlayer });
+          assert.fail("cannot call by non player");
+        } catch (e) {
+          const expected = "you are not player";
+          const actual = e.reason;
+          assert.equal(actual, expected, "should not be permitted");
+        }
+      });
+
+      it("throws an error when non player try to refund", async () => {
+        await gameBank.refundTokens(factory.address, gameId, { from: guest });
+        try {
+          await gameBank.refundTokens(factory.address, gameId, { from: guest });
+          assert.fail("cannot call to refund multiple");
+        } catch (e) {
+          const expected = "you have no balance of game stake";
+          const actual = e.reason;
+          assert.equal(actual, expected, "should not be permitted");
+        }
+      });
+
+      it("deposited balance of player increases and stake decreases", async () => {
+        const rewardsAmount = BET_AMOUNT;
+        const currentDepositedBalance = (await gameBank._gameUserBalanceDeposited(factory.address, guest)).toNumber();
+        const currentStakeBalance = (await gameBank._gameGameIdUserBalanceStake(factory.address, gameId, guest)).toNumber();
+        await gameBank.refundTokens(factory.address, gameId, { from: guest });
+        const newDepositedBalance = (await gameBank._gameUserBalanceDeposited(factory.address, guest)).toNumber();
+        const newStakeBalance = (await gameBank._gameGameIdUserBalanceStake(factory.address, gameId, guest)).toNumber();
+
+        assert.equal(newDepositedBalance, currentDepositedBalance + rewardsAmount, "balance should match");
+        assert.equal(newStakeBalance, currentStakeBalance - BET_AMOUNT, "balance should match");
+      });
+
+      it("change status from Tied to Paid", async () => {
+        const prevStatus = (await factory._games(gameId)).status.toNumber();
+        assert.equal(prevStatus, STATUS.Tied, "status should be Tied");
+        await gameBank.refundTokens(factory.address, gameId, { from: guest });
+        await gameBank.refundTokens(factory.address, gameId, { from: host });
+        const nextStatus = (await factory._games(gameId)).status.toNumber();
+        assert.equal(nextStatus, STATUS.Paid, "status should be Paid");
+      });
+    });
+  });
 });
