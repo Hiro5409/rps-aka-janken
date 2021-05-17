@@ -45,6 +45,38 @@ contract GameBank is IGameBank {
         _gameUserBalanceStake[msg.sender][user] = stakeBalance.add(amount);
     }
 
+    function getGameRewards(address game, uint256 gameId) external {
+        IGameFactory gameFactory = IGameFactory(game);
+        require(
+            gameFactory.isGameDecided(gameId),
+            "status is invalid, required Decided"
+        );
+        require(gameFactory.isGameWinner(gameId, msg.sender), "you are loser");
+
+        address winner = msg.sender;
+        (address loser, uint256 amount) = gameFactory.getResult(gameId);
+
+        uint256 depositedWinnerBalance =
+            _gameUserBalanceDeposited[game][winner];
+        uint256 stakeWinnerBalance = _gameUserBalanceStake[game][winner];
+        uint256 stakeLoserBalance = _gameUserBalanceStake[game][loser];
+
+        require(
+            stakeWinnerBalance >= amount,
+            "winner should deposit and bet in advance"
+        );
+        require(
+            stakeLoserBalance >= amount,
+            "loser should deposit and bet in advance"
+        );
+        _gameUserBalanceStake[game][winner] = stakeWinnerBalance.sub(amount);
+        _gameUserBalanceStake[game][loser] = stakeLoserBalance.sub(amount);
+        _gameUserBalanceDeposited[game][winner] = depositedWinnerBalance.add(
+            amount.mul(2)
+        );
+        gameFactory.setGameStatus(gameId, Status.Paid);
+    }
+
     function withdrawTokens(address game, uint256 withdrawAmount) external {
         uint256 depositedBalance = _gameUserBalanceDeposited[game][msg.sender];
         require(

@@ -128,4 +128,78 @@ contract("GameBank", accounts => {
       assert.equal(actual, expected, "events should match");
     });
   });
+
+  describe("get rewards", () => {
+    let gameId;
+    const guest = accounts[2];
+    const hostHand = HAND.Rock;
+    const hostHandHashed = getHashedHand(hostHand, SALT);
+    const guestHand = HAND.Paper;
+
+    beforeEach(async () => {
+      await setupGame({ factory, jankenToken, gameBank, master, user: host });
+      await setupGame({ factory, jankenToken, gameBank, master, user: guest });
+      gameId = await createGame({ factory, hostHandHashed, host });
+    });
+
+    it("throws an error when try to get rewards but game status was invalid", async () => {
+      try {
+        await factory.joinGame(gameId, guestHand, { from: guest });
+        await gameBank.getGameRewards(factory.address, gameId, { from: guest });
+        assert.fail("invalid status");
+      } catch (e) {
+        const expected = "status is invalid, required Decided";
+        const actual = e.reason;
+        assert.equal(actual, expected, "should not be permitted");
+      }
+    });
+
+    describe("get rewards for winning game", () => {
+      beforeEach(async () => {
+        await factory.joinGame(gameId, guestHand, { from: guest });
+        await factory.revealHostHand(gameId, hostHand, SALT, { from: host });
+      });
+
+      it("throws an error when loser try to get rewards", async () => {
+        try {
+          await gameBank.getGameRewards(factory.address, gameId, { from: host });
+          assert.fail("cannot call by loser");
+        } catch (e) {
+          const expected = "you are loser";
+          const actual = e.reason;
+          assert.equal(actual, expected, "should not be permitted");
+        }
+      });
+
+      it("deposited balance of winner increases and stake decreases", async () => {
+        const rewardsAmount = BET_AMOUNT * 2;
+        const currentDepositedBalance = (await gameBank._gameUserBalanceDeposited(factory.address, guest)).toNumber();
+        const currentStakeBalance = (await gameBank._gameUserBalanceStake(factory.address, guest)).toNumber();
+        await gameBank.getGameRewards(factory.address, gameId, { from: guest });
+        const newDepositedBalance = (await gameBank._gameUserBalanceDeposited(factory.address, guest)).toNumber();
+        const newStakeBalance = (await gameBank._gameUserBalanceStake(factory.address, guest)).toNumber();
+
+        assert.equal(newDepositedBalance, currentDepositedBalance + rewardsAmount, "balance should match");
+        assert.equal(newStakeBalance, currentStakeBalance - BET_AMOUNT, "balance should match");
+      });
+
+      it("stake balance of loser decreases", async () => {
+        const currentStakeBalance = (await gameBank._gameUserBalanceStake(factory.address, host)).toNumber();
+        await gameBank.getGameRewards(factory.address, gameId, { from: guest });
+        const newStakeBalance = (await gameBank._gameUserBalanceStake(factory.address, host)).toNumber();
+
+        assert.equal(newStakeBalance, currentStakeBalance - BET_AMOUNT, "balance should match");
+      });
+
+      it("change status from Decided to Paid", async () => {
+        const prevStatus = (await factory._games(gameId)).status.toNumber();
+        assert.equal(prevStatus, STATUS.Decided, "status should be Decided");
+
+        await gameBank.getGameRewards(factory.address, gameId, { from: guest });
+
+        const nextStatus = (await factory._games(gameId)).status.toNumber();
+        assert.equal(nextStatus, STATUS.Paid, "status should be Paid");
+      });
+    });
+  });
 });
