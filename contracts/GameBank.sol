@@ -66,6 +66,19 @@ contract GameBank is IGameBank {
         require(_token.transfer(winner, amount * 2), "fail to transfer");
 
         gameFactory.setGameStatus(gameId, Status.Paid);
-        emit WithdrawToken(factory, winner, amount);
+    }
+
+    function withdrawTokens(address game, uint256 withdrawAmount) external {
+        uint256 userBalance = _gameToUserBalance[game][msg.sender];
+        require(
+            userBalance >= withdrawAmount,
+            "withdraw amount exceeds balance"
+        );
+        _gameToUserBalance[game][msg.sender] = userBalance.sub(withdrawAmount);
+        require(
+            _token.transfer(msg.sender, withdrawAmount),
+            "fail to transfer"
+        );
+        emit WithdrawTokens(game, msg.sender, withdrawAmount);
     }
 }
