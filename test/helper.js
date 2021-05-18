@@ -10,6 +10,30 @@ const HAND = {
   Scissors: 3,
 };
 
+const RESULT = {
+  Draw: 0,
+  Lose: 1,
+  Win: 2,
+};
+
+const GAME_RESULT = {
+  [HAND.Rock]: {
+    [HAND.Rock]: RESULT.Draw,
+    [HAND.Paper]: RESULT.Lose,
+    [HAND.Scissors]: RESULT.Win,
+  },
+  [HAND.Paper]: {
+    [HAND.Paper]: RESULT.Draw,
+    [HAND.Scissors]: RESULT.Lose,
+    [HAND.Rock]: RESULT.Win,
+  },
+  [HAND.Scissors]: {
+    [HAND.Scissors]: RESULT.Draw,
+    [HAND.Rock]: RESULT.Lose,
+    [HAND.Paper]: RESULT.Win,
+  },
+}
+
 const STATUS = {
   Created: 0,
   Joined: 1,
@@ -52,6 +76,19 @@ const createGame = async ({
   return gameId;
 };
 
+const playGame = async ({ factory, hostHand, guestHand, accounts }) => {
+  const host = accounts[1];
+  const guest = accounts[2];
+  const hostHandHashed = getHashedHand(hostHand, SALT);
+  const gameId = await createGame({ factory, hostHandHashed ,host });
+  await factory.joinGame(gameId, guestHand, { from: guest });
+  await factory.revealHostHand(gameId, hostHand, SALT, { from: host })
+
+  const status = (await factory._games(gameId)).status.toNumber();
+  const winner = (await factory._games(gameId)).winner;
+  return (status == STATUS.Tied) ? RESULT.Draw : (winner == host ? RESULT.Win : RESULT.Lose);
+};
+
 module.exports = {
   MINT_AMOUNT,
   BET_AMOUNT,
@@ -59,7 +96,10 @@ module.exports = {
   FAKE_SALT,
   HAND,
   STATUS,
+  RESULT,
+  GAME_RESULT,
   getHashedHand,
   setupGame,
   createGame,
+  playGame,
 };
