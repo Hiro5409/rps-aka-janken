@@ -12,7 +12,7 @@ const {
   createGame,
 } = require("./helper");
 
-contract("GameFactory", accounts => {
+contract("GameFactory: create, join", accounts => {
   const master = accounts[0];
   const host = accounts[1];
   const guest = accounts[2];
@@ -23,10 +23,11 @@ contract("GameFactory", accounts => {
   let factory;
   let jankenToken;
   let gameBank;
+  let gameId;
 
   beforeEach(async () => {
     jankenToken = await JankenTokenContract.new();
-    gameBank = await GameBankContract.new(jankenToken.address);
+    gameBank = await GameBankContract.new(jankenToken.address, { from: master });
     factory = await GameFactoryContract.new(gameBank.address);
   });
 
@@ -91,8 +92,6 @@ contract("GameFactory", accounts => {
   });
 
   describe("fail to join game", () => {
-    let gameId;
-
     beforeEach(async () => {
       await setupGame({ factory, jankenToken, gameBank, master, user: host });
       gameId = await createGame({ factory, hostHandHashed, host });
@@ -136,8 +135,6 @@ contract("GameFactory", accounts => {
   });
 
   describe("success to join game", () => {
-    let gameId;
-
     beforeEach(async () => {
       await setupGame({ factory, jankenToken, gameBank, master, user: host });
       await setupGame({ factory, jankenToken, gameBank, master, user: guest });
@@ -169,11 +166,31 @@ contract("GameFactory", accounts => {
       assert.equal(nextStatus, STATUS.Joined, "status should be Joined");
     });
   });
+});
+
+contract("GameFactory: reveal, judge", accounts => {
+  const master = accounts[0];
+  const host = accounts[1];
+  const guest = accounts[2];
+  const hostHand = HAND.Rock;
+  const hostHandHashed = getHashedHand(hostHand, SALT);
+  const guestHand = HAND.Paper;
+
+  let factory;
+  let jankenToken;
+  let gameBank;
+  let gameId;
+
+  beforeEach(async () => {
+    jankenToken = await JankenTokenContract.new();
+    gameBank = await GameBankContract.new(jankenToken.address, { from: master });
+    factory = await GameFactoryContract.new(gameBank.address);
+    await setupGame({ factory, jankenToken, gameBank, master, user: host });
+    await setupGame({ factory, jankenToken, gameBank, master, user: guest });
+  });
 
   describe("reveal host hand", () => {
     beforeEach(async () => {
-      await setupGame({ factory, jankenToken, gameBank, master, user: host });
-      await setupGame({ factory, jankenToken, gameBank, master, user: guest });
       gameId = await createGame({ factory, hostHandHashed, host });
       await factory.joinGame(gameId, guestHand, { from: guest });
     });
@@ -229,8 +246,6 @@ contract("GameFactory", accounts => {
 
   describe("game is decided", () => {
     beforeEach(async () => {
-      await setupGame({ factory, jankenToken, gameBank, master, user: host });
-      await setupGame({ factory, jankenToken, gameBank, master, user: guest });
       gameId = await createGame({ factory, hostHandHashed, host });
       await factory.joinGame(gameId, guestHand, { from: guest });
     });
@@ -256,8 +271,6 @@ contract("GameFactory", accounts => {
 
   describe("game is tied", () => {
     beforeEach(async () => {
-      await setupGame({ factory, jankenToken, gameBank, master, user: host });
-      await setupGame({ factory, jankenToken, gameBank, master, user: guest });
       gameId = await createGame({ factory, hostHandHashed: getHashedHand(guestHand, SALT), host });
       await factory.joinGame(gameId, guestHand, { from: guest });
       await factory.revealHostHand(gameId, guestHand, SALT, { from: host })
