@@ -46,4 +46,8 @@ interface IGameFactory is IGameStatus, IJankenGame {
         );
 
     function setGameStatus(uint256 gameId, Status status) external;
+
+    function changeTimeoutSeconds(uint256 timeoutSeconds) external;
+
+    function changeMinBetAmount(uint256 minBetAmount) external;
 }

@@ -2,16 +2,18 @@
 
 pragma solidity 0.6.8;
 
+import "openzeppelin-solidity/contracts/access/AccessControl.sol";
 import "./IGameFactory.sol";
 import "./GameBank.sol";
 import "./IGameBank.sol";
 import "./JankenGame.sol";
 import "./GameStatus.sol";
 
-contract GameFactory is IGameFactory, JankenGame, GameStatus {
+contract GameFactory is IGameFactory, JankenGame, GameStatus, AccessControl {
+    bytes32 private constant GAME_MASTER_ROLE = keccak256("GAME_MASTER_ROLE");
     IGameBank private _gameBank;
-    uint256 private constant _minBetAmount = 5;
-    uint256 private constant _timeoutSeconds = 216000;
+    uint256 public _minBetAmount = 5;
+    uint256 public _timeoutSeconds = 216000;
     Game[] public _games;
 
     event GameCreated(uint256 indexed gameId, address indexed host);
@@ -25,6 +27,7 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
 
     constructor(address gameBankAddress) public {
         _gameBank = IGameBank(gameBankAddress);
+        _setupRole(GAME_MASTER_ROLE, msg.sender);
     }
 
     modifier isSufficientMinimumBetAmount(uint256 betAmount) {
@@ -68,6 +71,30 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
             "cannot change hand or salt later out"
         );
         _;
+    }
+
+    modifier isGameMaster() {
+        require(
+            hasRole(GAME_MASTER_ROLE, msg.sender),
+            "Caller is not a game master"
+        );
+        _;
+    }
+
+    function changeTimeoutSeconds(uint256 timeoutSeconds)
+        external
+        override
+        isGameMaster
+    {
+        _timeoutSeconds = timeoutSeconds;
+    }
+
+    function changeMinBetAmount(uint256 minBetAmount)
+        external
+        override
+        isGameMaster
+    {
+        _minBetAmount = minBetAmount;
     }
 
     function isGameDecided(uint256 gameId)
