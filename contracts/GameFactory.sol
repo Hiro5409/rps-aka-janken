@@ -50,6 +50,14 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus, AccessControl {
         _;
     }
 
+    modifier isGameGuest(address guestAddress) {
+        require(
+            msg.sender == guestAddress,
+            "guest of this game is only authorized"
+        );
+        _;
+    }
+
     modifier isValidHand(
         Hand hostHand,
         bytes32 salt,
@@ -66,6 +74,14 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus, AccessControl {
 
     modifier isNotTimedOut(uint256 joinedAt) {
         require(joinedAt + _timeoutSeconds > now, "this game was timed out");
+        _;
+    }
+
+    modifier isTimedOut(uint256 joinedAt) {
+        require(
+            joinedAt + _timeoutSeconds <= now,
+            "this game was not timed out"
+        );
         _;
     }
 
@@ -190,6 +206,18 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus, AccessControl {
         game.hostHand = hostHand;
         emit GameRevealed(gameId, hostHand);
         judge(gameId);
+    }
+
+    function judgeTimedOutGame(uint256 gameId)
+        public
+        isGameGuest(_games[gameId].guestAddress)
+        isTimedOut(_games[gameId].joinedAt)
+    {
+        Game storage game = _games[gameId];
+        game.status = Status.Decided;
+        game.winner = game.guestAddress;
+        game.loser = game.hostAddress;
+        emit GameJudged(gameId, game.guestAddress, game.hostAddress);
     }
 
     function judge(uint256 gameId) private {
