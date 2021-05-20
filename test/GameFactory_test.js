@@ -327,7 +327,7 @@ contract("GameFactory: timedOut", accounts => {
       }
     });
 
-    it("change timeout seconds", async () => {
+    it("change time out seconds", async () => {
       const prevTimeoutSec = await factory._timeoutSeconds();
       await factory.changeTimeoutSeconds(TIMEOUT_SECONDS, { from: master });
       const currentTimeoutSec = await factory._timeoutSeconds();
@@ -350,7 +350,6 @@ contract("GameFactory: timedOut", accounts => {
       }
     });
   });
-
 
   describe("judge timed out game", () => {
     beforeEach(async () => {
@@ -382,7 +381,7 @@ contract("GameFactory: timedOut", accounts => {
       }
     });
 
-    it("judge timed out game", async () => {
+    it("judge timed out game by guest", async () => {
       await time.increase(TIMEOUT_SECONDS);
       await factory.judgeTimedOutGame(gameId, { from: guest });
 
@@ -394,7 +393,7 @@ contract("GameFactory: timedOut", accounts => {
       assert.equal(status, STATUS.Decided, "status should be Decided");
     });
 
-    it("emits the GameCreated event", async () => {
+    it("emits the GameJudged event", async () => {
       await time.increase(TIMEOUT_SECONDS);
       const tx = await factory.judgeTimedOutGame(gameId, { from: guest });
       const actual = tx.logs[0].event;
