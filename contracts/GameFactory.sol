@@ -64,6 +64,11 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus, AccessControl {
         _;
     }
 
+    modifier isNotTimedOut(uint256 joinedAt) {
+        require(joinedAt + _timeoutSeconds > now, "this game was timed out");
+        _;
+    }
+
     modifier isGameMaster() {
         require(
             hasRole(GAME_MASTER_ROLE, msg.sender),
@@ -179,6 +184,7 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus, AccessControl {
         isGameHost(_games[gameId].hostAddress)
         isStatusJoined(_games[gameId].status)
         isValidHand(hostHand, salt, _games[gameId].hostHandHashed)
+        isNotTimedOut(_games[gameId].joinedAt)
     {
         Game storage game = _games[gameId];
         game.hostHand = hostHand;
