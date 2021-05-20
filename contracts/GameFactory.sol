@@ -16,15 +16,6 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus, AccessControl {
     uint256 public _timeoutSeconds = 216000;
     Game[] public _games;
 
-    event GameCreated(uint256 indexed gameId, address indexed host);
-    event GameJoined(
-        uint256 indexed gameId,
-        address indexed guest,
-        Hand guestHand
-    );
-    event GameRevealed(Hand hostHand);
-    event GameJudged(address indexed winner, address indexed loser);
-
     constructor(address gameBankAddress) public {
         _gameBank = IGameBank(gameBankAddress);
         _setupRole(GAME_MASTER_ROLE, msg.sender);
@@ -189,7 +180,7 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus, AccessControl {
     {
         Game storage game = _games[gameId];
         game.hostHand = hostHand;
-        emit GameRevealed(hostHand);
+        emit GameRevealed(gameId, hostHand);
         judge(gameId);
     }
 
@@ -206,7 +197,7 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus, AccessControl {
         game.status = (winner == loser ? Status.Tied : Status.Decided);
         game.winner = winner;
         game.loser = loser;
-        emit GameJudged(winner, loser);
+        emit GameJudged(gameId, winner, loser);
     }
 
     function getResult(uint256 gameId)

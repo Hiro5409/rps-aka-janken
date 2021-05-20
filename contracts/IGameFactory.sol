@@ -20,6 +20,19 @@ interface IGameFactory is IGameStatus, IJankenGame {
         Status status;
     }
 
+    event GameCreated(uint256 indexed gameId, address indexed host);
+    event GameJoined(
+        uint256 indexed gameId,
+        address indexed guest,
+        Hand guestHand
+    );
+    event GameRevealed(uint256 indexed gameId, Hand hostHand);
+    event GameJudged(
+        uint256 indexed gameId,
+        address indexed winner,
+        address indexed loser
+    );
+
     function isGameDecided(uint256 gameId) external view returns (bool);
 
     function isGameTied(uint256 gameId) external view returns (bool);
