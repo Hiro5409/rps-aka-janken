@@ -10,6 +10,7 @@ interface IGameFactory is IGameStatus, IJankenGame {
         uint256 id;
         uint256 betAmount;
         uint256 timeoutSeconds;
+        uint256 joinedAt;
         address hostAddress;
         address guestAddress;
         address winner;

@@ -139,6 +139,7 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus, AccessControl {
                 id: gameId,
                 betAmount: betAmount,
                 timeoutSeconds: _timeoutSeconds,
+                joinedAt: 0,
                 hostAddress: msg.sender,
                 guestAddress: address(0),
                 winner: address(0),
@@ -164,6 +165,7 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus, AccessControl {
         game.guestAddress = msg.sender;
         game.guestHand = guestHand;
         game.status = Status.Joined;
+        game.joinedAt = block.timestamp;
         _gameBank.betTokens(msg.sender, gameId, _games[gameId].betAmount);
         emit GameJoined(gameId, msg.sender, guestHand);
     }
