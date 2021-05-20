@@ -2,6 +2,7 @@
   "name": "rps-aka-janken",
   "version": "1.0.0",
   "dependencies": {
+    "@openzeppelin/test-helpers": "^0.5.11",
     "openzeppelin-solidity": "3.4.0"
   }
 }
