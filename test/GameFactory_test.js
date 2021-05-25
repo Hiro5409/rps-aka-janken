@@ -75,16 +75,15 @@ contract("GameFactory", accounts => {
     });
 
     it("increase game staking balance in bank", async () => {
-      const currentDepositedBalance = (await gameBank._gameUserBalanceStake(factory.address, host)).toNumber();
-      await createGame({ factory, hostHandHashed, host });
-      const newDepositedBalance = (await gameBank._gameUserBalanceStake(factory.address, host)).toNumber();
-      const actual = newDepositedBalance;
-      const expected = currentDepositedBalance + BET_AMOUNT;
+      const gameId = await createGame({ factory, hostHandHashed, host });
+      const newStakeBalance = (await gameBank._gameGameIdUserBalanceStake(factory.address, gameId, host)).toNumber();
+      const actual = newStakeBalance;
+      const expected = BET_AMOUNT;
       assert.equal(actual, expected, "should match balance");
     });
 
     it("emits the GameCreated event", async () => {
-      tx = await factory.createGame(BET_AMOUNT, hostHandHashed, { from: host });
+      const tx = await factory.createGame(BET_AMOUNT, hostHandHashed, { from: host });
       const actual = tx.logs[0].event;
       const expected = "GameCreated";
       assert.equal(actual, expected, "events should match");

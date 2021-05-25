@@ -12,8 +12,8 @@ contract GameBank is IGameBank {
     IERC20 private _token;
     mapping(address => mapping(address => uint256))
         public _gameUserBalanceDeposited;
-    mapping(address => mapping(address => uint256))
-        public _gameUserBalanceStake;
+    mapping(address => mapping(uint256 => mapping(address => uint256)))
+        public _gameGameIdUserBalanceStake;
 
     constructor(address token) public {
         _token = IERC20(token);
@@ -32,9 +32,23 @@ contract GameBank is IGameBank {
         emit DepositTokens(game, sender, amount);
     }
 
-    function betTokensAsStake(address user, uint256 amount) external override {
+    function isDepositedTokens(address user, uint256 amount)
+        external
+        view
+        override
+        returns (bool)
+    {
+        return _gameUserBalanceDeposited[msg.sender][user] >= amount;
+    }
+
+    function betTokens(
+        address user,
+        uint256 gameId,
+        uint256 amount
+    ) external override {
         uint256 depositedBalance = _gameUserBalanceDeposited[msg.sender][user];
-        uint256 stakeBalance = _gameUserBalanceStake[msg.sender][user];
+        uint256 stakeBalance =
+            _gameGameIdUserBalanceStake[msg.sender][gameId][user];
         require(
             depositedBalance >= amount,
             "Insufficient tokens deposited in GameBank"
@@ -42,7 +56,8 @@ contract GameBank is IGameBank {
         _gameUserBalanceDeposited[msg.sender][user] = depositedBalance.sub(
             amount
         );
-        _gameUserBalanceStake[msg.sender][user] = stakeBalance.add(amount);
+        _gameGameIdUserBalanceStake[msg.sender][gameId][user] = stakeBalance
+            .add(amount);
     }
 
     function getGameRewards(address game, uint256 gameId) external {
@@ -54,12 +69,14 @@ contract GameBank is IGameBank {
         require(gameFactory.isGameWinner(gameId, msg.sender), "you are loser");
 
         address winner = msg.sender;
-        (address loser, uint256 amount) = gameFactory.getResult(gameId);
+        (, address loser, , , uint256 amount) = gameFactory.getResult(gameId);
 
         uint256 depositedWinnerBalance =
             _gameUserBalanceDeposited[game][winner];
-        uint256 stakeWinnerBalance = _gameUserBalanceStake[game][winner];
-        uint256 stakeLoserBalance = _gameUserBalanceStake[game][loser];
+        uint256 stakeWinnerBalance =
+            _gameGameIdUserBalanceStake[game][gameId][winner];
+        uint256 stakeLoserBalance =
+            _gameGameIdUserBalanceStake[game][gameId][loser];
 
         require(
             stakeWinnerBalance >= amount,
@@ -69,12 +86,44 @@ contract GameBank is IGameBank {
             stakeLoserBalance >= amount,
             "loser should deposit and bet in advance"
         );
-        _gameUserBalanceStake[game][winner] = stakeWinnerBalance.sub(amount);
-        _gameUserBalanceStake[game][loser] = stakeLoserBalance.sub(amount);
+        _gameGameIdUserBalanceStake[game][gameId][winner] = stakeWinnerBalance
+            .sub(amount);
+        _gameGameIdUserBalanceStake[game][gameId][loser] = stakeLoserBalance
+            .sub(amount);
         _gameUserBalanceDeposited[game][winner] = depositedWinnerBalance.add(
             amount.mul(2)
         );
         gameFactory.setGameStatus(gameId, Status.Paid);
+    }
+
+    function refundTokens(address game, uint256 gameId) external {
+        IGameFactory gameFactory = IGameFactory(game);
+        require(
+            gameFactory.isGameTied(gameId),
+            "status is invalid, required Tied"
+        );
+        address player = msg.sender;
+        require(gameFactory.isGamePlayer(gameId, player), "you are not player");
+
+        (, , address host, address guest, uint256 amount) =
+            gameFactory.getResult(gameId);
+
+        uint256 depositedBalance = _gameUserBalanceDeposited[game][player];
+        uint256 stakeBalance =
+            _gameGameIdUserBalanceStake[game][gameId][player];
+
+        require(stakeBalance >= amount, "you have no balance of game stake");
+        _gameGameIdUserBalanceStake[game][gameId][player] = stakeBalance.sub(
+            amount
+        );
+        _gameUserBalanceDeposited[game][player] = depositedBalance.add(amount);
+
+        if (
+            _gameGameIdUserBalanceStake[game][gameId][host] == 0 &&
+            _gameGameIdUserBalanceStake[game][gameId][guest] == 0
+        ) {
+            gameFactory.setGameStatus(gameId, Status.Paid);
+        }
     }
 
     function withdrawTokens(address game, uint256 withdrawAmount) external {

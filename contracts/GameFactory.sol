@@ -32,8 +32,11 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
         _;
     }
 
-    modifier betTokens(uint256 _amount) {
-        _gameBank.betTokensAsStake(msg.sender, _amount);
+    modifier isDepositedTokens(uint256 _amount) {
+        require(
+            _gameBank.isDepositedTokens(msg.sender, _amount),
+            "Insufficient tokens deposited in GameBank"
+        );
         _;
     }
 
@@ -92,6 +95,16 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
         return game.winner == me;
     }
 
+    function isGamePlayer(uint256 gameId, address me)
+        external
+        view
+        override
+        returns (bool)
+    {
+        Game memory game = _games[gameId];
+        return game.hostAddress == me || game.guestAddress == me;
+    }
+
     function setGameStatus(uint256 gameId, Status status) external override {
         Game storage game = _games[gameId];
         game.status = status;
@@ -100,7 +113,7 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
     function createGame(uint256 betAmount, bytes32 hostHandHashed)
         external
         isSufficientMinimumBetAmount(betAmount)
-        betTokens(betAmount)
+        isDepositedTokens(betAmount)
     {
         uint256 gameId = _games.length;
         Game memory newGame =
@@ -118,6 +131,7 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
                 status: Status.Created
             });
         _games.push(newGame);
+        _gameBank.betTokens(msg.sender, gameId, betAmount);
 
         emit GameCreated(gameId, msg.sender);
     }
@@ -126,12 +140,13 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
         external
         isNotGameHost(_games[gameId].hostAddress)
         isStatusCreated(_games[gameId].status)
-        betTokens(_games[gameId].betAmount)
+        isDepositedTokens(_games[gameId].betAmount)
     {
         Game storage game = _games[gameId];
         game.guestAddress = msg.sender;
         game.guestHand = guestHand;
         game.status = Status.Joined;
+        _gameBank.betTokens(msg.sender, gameId, _games[gameId].betAmount);
         emit GameJoined(gameId, msg.sender, guestHand);
     }
 
@@ -171,9 +186,21 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
         external
         view
         override
-        returns (address loser, uint256 amount)
+        returns (
+            address winner,
+            address loser,
+            address host,
+            address guest,
+            uint256 amount
+        )
     {
         Game memory game = _games[gameId];
-        return (game.loser, game.betAmount);
+        return (
+            game.winner,
+            game.loser,
+            game.hostAddress,
+            game.guestAddress,
+            game.betAmount
+        );
     }
 }
