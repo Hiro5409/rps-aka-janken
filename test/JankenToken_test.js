@@ -26,7 +26,6 @@ contract("JankenToken", accounts => {
   let gameBankAddress;
   const master = accounts[0];
   const host = accounts[1];
-  const guest = accounts[2];
 
   beforeEach(async () => {
     jankenToken = await JankenTokenContract.new();
@@ -52,7 +51,7 @@ contract("JankenToken", accounts => {
         await jankenToken.mint(host, mintAmount,{ from: host });
         assert.fail("minting was not restricted to master");
       } catch (e) {
-        const expected = "Caller is not a minter";
+        const expected = "Caller is not a admin";
         const actual = e.reason;
         assert.equal(actual, expected, "should not be permitted");
       }
@@ -81,7 +80,7 @@ contract("JankenToken", accounts => {
         await jankenToken.burn(host, burnAmount,{ from: host });
         assert.fail("burning was not restricted to master");
       } catch (e) {
-        const expected = "Caller is not a burner";
+        const expected = "Caller is not a admin";
         const actual = e.reason;
         assert.equal(actual, expected, "should not be permitted");
       }
@@ -89,13 +88,13 @@ contract("JankenToken", accounts => {
   });
 
   describe("approve", () => {
-    const amount = 10;
+    const approveAmount = 10;
 
     it("approve", async () => {
       const previousAllowance = (await jankenToken.allowance(host, gameBankAddress)).toNumber();
-      await jankenToken.approve(gameBankAddress, amount, { from: host });
+      await jankenToken.approve(gameBankAddress, approveAmount, { from: host });
       const nextAllowance = (await jankenToken.allowance(host, gameBankAddress)).toNumber();
-      const expected = amount;
+      const expected = approveAmount;
       const actual = nextAllowance - previousAllowance;
       assert.equal(actual, expected, "approved amount should match");
     });

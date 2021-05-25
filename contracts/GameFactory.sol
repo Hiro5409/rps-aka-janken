@@ -2,61 +2,259 @@
 
 pragma solidity 0.6.8;
 
-import "./Game.sol";
+import "openzeppelin-solidity/contracts/access/AccessControl.sol";
+import "./IGameFactory.sol";
 import "./GameBank.sol";
+import "./IGameBank.sol";
+import "./JankenGame.sol";
+import "./GameStatus.sol";
 
-contract GameFactory {
-    address[] private _games;
-    address public gameBankAddress;
+contract GameFactory is IGameFactory, JankenGame, GameStatus, AccessControl {
+    bytes32 private constant GAME_MASTER_ROLE = keccak256("GAME_MASTER_ROLE");
+    IGameBank private _gameBank;
+    uint256 public _minBetAmount = 5;
+    uint256 public _timeoutSeconds = 216000;
+    Game[] public _games;
 
-    uint256 public constant minBetAmount = 5;
-    uint256 public timeoutSeconds = 21600;
+    constructor(address gameBankAddress) public {
+        _gameBank = IGameBank(gameBankAddress);
+        _setupRole(GAME_MASTER_ROLE, msg.sender);
+    }
 
-    event GameCreated(address indexed game, address indexed host);
+    modifier isSufficientMinimumBetAmount(uint256 betAmount) {
+        require(betAmount >= _minBetAmount, "requried minimum bet amount");
+        _;
+    }
 
-    modifier isUserDepositedSufficientToken(
-        address _gameBankAddress,
-        uint256 _amount
-    ) {
-        GameBank gameBank = GameBank(_gameBankAddress);
+    modifier isDepositedTokens(uint256 _amount) {
         require(
-            gameBank.isUserDepositedSufficientToken(msg.sender, _amount),
-            "Insufficient token deposited in GameBank"
+            _gameBank.isDepositedTokens(msg.sender, _amount),
+            "Insufficient tokens deposited in GameBank"
         );
         _;
     }
 
-    modifier isSufficientMinimumBetAmount(uint256 _betAmount) {
-        require(_betAmount >= minBetAmount, "requried minimum bet amount");
+    modifier isNotGameHost(address hostAddress) {
+        require(
+            msg.sender != hostAddress,
+            "host of this game is not authorized"
+        );
         _;
     }
 
-    constructor(address _gameBankAddress) public {
-        gameBankAddress = _gameBankAddress;
+    modifier isGameHost(address hostAddress) {
+        require(
+            msg.sender == hostAddress,
+            "host of this game is only authorized"
+        );
+        _;
     }
 
-    function createGame(uint256 _betAmount, bytes32 _hostHandHashed)
-        public
-        isSufficientMinimumBetAmount(_betAmount)
-        isUserDepositedSufficientToken(gameBankAddress, _betAmount)
+    modifier isGameGuest(address guestAddress) {
+        require(
+            msg.sender == guestAddress,
+            "guest of this game is only authorized"
+        );
+        _;
+    }
+
+    modifier isValidHand(
+        Hand hostHand,
+        bytes32 salt,
+        bytes32 previousHostHandHashed
+    ) {
+        bytes32 currentHostHandHashed =
+            keccak256(abi.encodePacked(hostHand, salt));
+        require(
+            currentHostHandHashed == previousHostHandHashed,
+            "cannot change hand or salt later out"
+        );
+        _;
+    }
+
+    modifier isNotTimedOut(uint256 joinedAt) {
+        require(joinedAt + _timeoutSeconds > now, "this game was timed out");
+        _;
+    }
+
+    modifier isTimedOut(uint256 joinedAt) {
+        require(
+            joinedAt + _timeoutSeconds <= now,
+            "this game was not timed out"
+        );
+        _;
+    }
+
+    modifier isGameMaster() {
+        require(
+            hasRole(GAME_MASTER_ROLE, msg.sender),
+            "Caller is not a game master"
+        );
+        _;
+    }
+
+    function changeTimeoutSeconds(uint256 timeoutSeconds)
+        external
+        override
+        isGameMaster
     {
-        Game game =
-            new Game(
-                msg.sender,
-                _betAmount,
-                timeoutSeconds,
-                _hostHandHashed,
-                gameBankAddress
-            );
-        _games.push(address(game));
-        emit GameCreated(address(game), msg.sender);
+        _timeoutSeconds = timeoutSeconds;
     }
 
-    function games() public view returns (address[] memory collection) {
-        collection = new address[](_games.length);
-        for (uint256 i = 0; i < _games.length; i++) {
-            collection[i] = _games[i];
-        }
-        return collection;
+    function changeMinBetAmount(uint256 minBetAmount)
+        external
+        override
+        isGameMaster
+    {
+        _minBetAmount = minBetAmount;
+    }
+
+    function isGameDecided(uint256 gameId)
+        external
+        view
+        override
+        returns (bool)
+    {
+        Game memory game = _games[gameId];
+        return game.status == Status.Decided;
+    }
+
+    function isGameTied(uint256 gameId) external view override returns (bool) {
+        Game memory game = _games[gameId];
+        return game.status == Status.Tied;
+    }
+
+    function isGameWinner(uint256 gameId, address me)
+        external
+        view
+        override
+        returns (bool)
+    {
+        Game memory game = _games[gameId];
+        return game.winner == me;
+    }
+
+    function isGamePlayer(uint256 gameId, address me)
+        external
+        view
+        override
+        returns (bool)
+    {
+        Game memory game = _games[gameId];
+        return game.hostAddress == me || game.guestAddress == me;
+    }
+
+    function setGameStatus(uint256 gameId, Status status) external override {
+        Game storage game = _games[gameId];
+        game.status = status;
+    }
+
+    function createGame(uint256 betAmount, bytes32 hostHandHashed)
+        external
+        isSufficientMinimumBetAmount(betAmount)
+        isDepositedTokens(betAmount)
+    {
+        uint256 gameId = _games.length;
+        Game memory newGame =
+            Game({
+                id: gameId,
+                betAmount: betAmount,
+                timeoutSeconds: _timeoutSeconds,
+                joinedAt: 0,
+                hostAddress: msg.sender,
+                guestAddress: address(0),
+                winner: address(0),
+                loser: address(0),
+                hostHandHashed: hostHandHashed,
+                hostHand: Hand.None,
+                guestHand: Hand.None,
+                status: Status.Created
+            });
+        _games.push(newGame);
+        _gameBank.betTokens(msg.sender, gameId, betAmount);
+
+        emit GameCreated(gameId, msg.sender);
+    }
+
+    function joinGame(uint256 gameId, Hand guestHand)
+        external
+        isNotGameHost(_games[gameId].hostAddress)
+        isStatusCreated(_games[gameId].status)
+        isDepositedTokens(_games[gameId].betAmount)
+    {
+        Game storage game = _games[gameId];
+        game.guestAddress = msg.sender;
+        game.guestHand = guestHand;
+        game.status = Status.Joined;
+        game.joinedAt = block.timestamp;
+        _gameBank.betTokens(msg.sender, gameId, _games[gameId].betAmount);
+        emit GameJoined(gameId, msg.sender, guestHand);
+    }
+
+    function revealHostHand(
+        uint256 gameId,
+        Hand hostHand,
+        bytes32 salt
+    )
+        external
+        isGameHost(_games[gameId].hostAddress)
+        isStatusJoined(_games[gameId].status)
+        isValidHand(hostHand, salt, _games[gameId].hostHandHashed)
+        isNotTimedOut(_games[gameId].joinedAt)
+    {
+        Game storage game = _games[gameId];
+        game.hostHand = hostHand;
+        emit GameRevealed(gameId, hostHand);
+        judge(gameId);
+    }
+
+    function judgeTimedOutGame(uint256 gameId)
+        public
+        isGameGuest(_games[gameId].guestAddress)
+        isTimedOut(_games[gameId].joinedAt)
+    {
+        Game storage game = _games[gameId];
+        game.status = Status.Decided;
+        game.winner = game.guestAddress;
+        game.loser = game.hostAddress;
+        emit GameJudged(gameId, game.guestAddress, game.hostAddress);
+    }
+
+    function judge(uint256 gameId) private {
+        Game storage game = _games[gameId];
+        (address winner, address loser) =
+            playGame(
+                game.hostAddress,
+                game.hostHand,
+                game.guestAddress,
+                game.guestHand
+            );
+
+        game.status = (winner == loser ? Status.Tied : Status.Decided);
+        game.winner = winner;
+        game.loser = loser;
+        emit GameJudged(gameId, winner, loser);
+    }
+
+    function getResult(uint256 gameId)
+        external
+        view
+        override
+        returns (
+            address winner,
+            address loser,
+            address host,
+            address guest,
+            uint256 amount
+        )
+    {
+        Game memory game = _games[gameId];
+        return (
+            game.winner,
+            game.loser,
+            game.hostAddress,
+            game.guestAddress,
+            game.betAmount
+        );
     }
 }
