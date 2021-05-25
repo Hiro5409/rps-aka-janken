@@ -11,8 +11,9 @@ const {
   FAKE_SALT,
   createGame,
 } = require("./helper");
+const { time } = require("@openzeppelin/test-helpers");
 
-contract("GameFactory", accounts => {
+contract("GameFactory: create, join", accounts => {
   const master = accounts[0];
   const host = accounts[1];
   const guest = accounts[2];
@@ -23,10 +24,11 @@ contract("GameFactory", accounts => {
   let factory;
   let jankenToken;
   let gameBank;
+  let gameId;
 
   beforeEach(async () => {
     jankenToken = await JankenTokenContract.new();
-    gameBank = await GameBankContract.new(jankenToken.address);
+    gameBank = await GameBankContract.new(jankenToken.address, { from: master });
     factory = await GameFactoryContract.new(gameBank.address);
   });
 
@@ -91,8 +93,6 @@ contract("GameFactory", accounts => {
   });
 
   describe("fail to join game", () => {
-    let gameId;
-
     beforeEach(async () => {
       await setupGame({ factory, jankenToken, gameBank, master, user: host });
       gameId = await createGame({ factory, hostHandHashed, host });
@@ -136,8 +136,6 @@ contract("GameFactory", accounts => {
   });
 
   describe("success to join game", () => {
-    let gameId;
-
     beforeEach(async () => {
       await setupGame({ factory, jankenToken, gameBank, master, user: host });
       await setupGame({ factory, jankenToken, gameBank, master, user: guest });
@@ -169,11 +167,31 @@ contract("GameFactory", accounts => {
       assert.equal(nextStatus, STATUS.Joined, "status should be Joined");
     });
   });
+});
+
+contract("GameFactory: reveal, judge", accounts => {
+  const master = accounts[0];
+  const host = accounts[1];
+  const guest = accounts[2];
+  const hostHand = HAND.Rock;
+  const hostHandHashed = getHashedHand(hostHand, SALT);
+  const guestHand = HAND.Paper;
+
+  let factory;
+  let jankenToken;
+  let gameBank;
+  let gameId;
+
+  beforeEach(async () => {
+    jankenToken = await JankenTokenContract.new();
+    gameBank = await GameBankContract.new(jankenToken.address, { from: master });
+    factory = await GameFactoryContract.new(gameBank.address);
+    await setupGame({ factory, jankenToken, gameBank, master, user: host });
+    await setupGame({ factory, jankenToken, gameBank, master, user: guest });
+  });
 
   describe("reveal host hand", () => {
     beforeEach(async () => {
-      await setupGame({ factory, jankenToken, gameBank, master, user: host });
-      await setupGame({ factory, jankenToken, gameBank, master, user: guest });
       gameId = await createGame({ factory, hostHandHashed, host });
       await factory.joinGame(gameId, guestHand, { from: guest });
     });
@@ -229,8 +247,6 @@ contract("GameFactory", accounts => {
 
   describe("game is decided", () => {
     beforeEach(async () => {
-      await setupGame({ factory, jankenToken, gameBank, master, user: host });
-      await setupGame({ factory, jankenToken, gameBank, master, user: guest });
       gameId = await createGame({ factory, hostHandHashed, host });
       await factory.joinGame(gameId, guestHand, { from: guest });
     });
@@ -256,8 +272,6 @@ contract("GameFactory", accounts => {
 
   describe("game is tied", () => {
     beforeEach(async () => {
-      await setupGame({ factory, jankenToken, gameBank, master, user: host });
-      await setupGame({ factory, jankenToken, gameBank, master, user: guest });
       gameId = await createGame({ factory, hostHandHashed: getHashedHand(guestHand, SALT), host });
       await factory.joinGame(gameId, guestHand, { from: guest });
       await factory.revealHostHand(gameId, guestHand, SALT, { from: host })
@@ -274,6 +288,117 @@ contract("GameFactory", accounts => {
     it("change game status from Joined to Tied", async () => {
       const status = (await factory._games(gameId)).status.toNumber();
       assert.equal(status, STATUS.Tied, "status should be Decided");
+    });
+  });
+});
+
+contract("GameFactory: timedOut", accounts => {
+  const master = accounts[0];
+  const host = accounts[1];
+  const guest = accounts[2];
+  const hostHand = HAND.Rock;
+  const hostHandHashed = getHashedHand(hostHand, SALT);
+  const guestHand = HAND.Paper;
+  const DEFAULT_TIMEOUT_SECONDS = 216000;
+  const TIMEOUT_SECONDS = 1;
+
+  let factory;
+  let jankenToken;
+  let gameBank;
+  let gameId;
+
+  beforeEach(async () => {
+    jankenToken = await JankenTokenContract.new();
+    gameBank = await GameBankContract.new(jankenToken.address, { from: master });
+    factory = await GameFactoryContract.new(gameBank.address);
+    await setupGame({ factory, jankenToken, gameBank, master, user: host });
+    await setupGame({ factory, jankenToken, gameBank, master, user: guest });
+  });
+
+  describe("timed out", () => {
+    it("throws an error when try to change timeout seconds by non game master", async () => {
+      try {
+        await factory.changeTimeoutSeconds(TIMEOUT_SECONDS, { from: host });
+        assert.fail("you are not master");
+      } catch (e) {
+        const expected = "Caller is not a game master";
+        const actual = e.reason;
+        assert.equal(actual, expected, "should not be permitted");
+      }
+    });
+
+    it("change time out seconds", async () => {
+      const prevTimeoutSec = await factory._timeoutSeconds();
+      await factory.changeTimeoutSeconds(TIMEOUT_SECONDS, { from: master });
+      const currentTimeoutSec = await factory._timeoutSeconds();
+
+      assert.equal(prevTimeoutSec, DEFAULT_TIMEOUT_SECONDS, "should not be permitted");
+      assert.equal(currentTimeoutSec, TIMEOUT_SECONDS, "should not be permitted");
+    });
+
+    it("cannot reveal host hand because of time out", async () => {
+      await factory.changeTimeoutSeconds(TIMEOUT_SECONDS, { from: master });
+      gameId = await createGame({ factory, hostHandHashed, host });
+      await factory.joinGame(gameId, guestHand, { from: guest });
+      await time.increase(TIMEOUT_SECONDS);
+      try {
+        await factory.revealHostHand(gameId, hostHand, SALT, { from: host });
+      } catch (e) {
+        const expected = "this game was timed out";
+        const actual = e.reason;
+        assert.equal(actual, expected, "should not be permitted");
+      }
+    });
+  });
+
+  describe("judge timed out game", () => {
+    beforeEach(async () => {
+      await factory.changeTimeoutSeconds(TIMEOUT_SECONDS, { from: master });
+      gameId = await createGame({ factory, hostHandHashed, host });
+      await factory.joinGame(gameId, guestHand, { from: guest });
+    });
+
+    it("throws an error when try to judge game not timed out", async () => {
+      try {
+        await factory.judgeTimedOutGame(gameId, { from: guest });
+        assert.fail("the game was not timed out");
+      } catch (e) {
+        const expected = "this game was not timed out";
+        const actual = e.reason;
+        assert.equal(actual, expected, "should not be permitted");
+      }
+    });
+
+    it("throws an error when try to call by non guest", async () => {
+      await time.increase(TIMEOUT_SECONDS);
+      try {
+        await factory.judgeTimedOutGame(gameId, { from: host });
+        assert.fail("you are not guest");
+      } catch (e) {
+        const expected = "guest of this game is only authorized";
+        const actual = e.reason;
+        assert.equal(actual, expected, "should not be permitted");
+      }
+    });
+
+    it("judge timed out game by guest", async () => {
+      await time.increase(TIMEOUT_SECONDS);
+      await factory.judgeTimedOutGame(gameId, { from: guest });
+
+      const { winner, loser } = await factory.getResult(gameId);
+      assert.equal(winner, guest, "winner should be guest");
+      assert.equal(loser, host, "loser should be host");
+
+      const status = (await factory._games(gameId)).status.toNumber();
+      assert.equal(status, STATUS.Decided, "status should be Decided");
+    });
+
+    it("emits the GameJudged event", async () => {
+      await time.increase(TIMEOUT_SECONDS);
+      const tx = await factory.judgeTimedOutGame(gameId, { from: guest });
+      const actual = tx.logs[0].event;
+      const expected = "GameJudged";
+      assert.equal(actual, expected, "event should match");
     });
   });
 });

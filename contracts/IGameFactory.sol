@@ -10,6 +10,7 @@ interface IGameFactory is IGameStatus, IJankenGame {
         uint256 id;
         uint256 betAmount;
         uint256 timeoutSeconds;
+        uint256 joinedAt;
         address hostAddress;
         address guestAddress;
         address winner;
@@ -19,6 +20,19 @@ interface IGameFactory is IGameStatus, IJankenGame {
         Hand guestHand;
         Status status;
     }
+
+    event GameCreated(uint256 indexed gameId, address indexed host);
+    event GameJoined(
+        uint256 indexed gameId,
+        address indexed guest,
+        Hand guestHand
+    );
+    event GameRevealed(uint256 indexed gameId, Hand hostHand);
+    event GameJudged(
+        uint256 indexed gameId,
+        address indexed winner,
+        address indexed loser
+    );
 
     function isGameDecided(uint256 gameId) external view returns (bool);
 
@@ -46,4 +60,8 @@ interface IGameFactory is IGameStatus, IJankenGame {
         );
 
     function setGameStatus(uint256 gameId, Status status) external;
+
+    function changeTimeoutSeconds(uint256 timeoutSeconds) external;
+
+    function changeMinBetAmount(uint256 minBetAmount) external;
 }

@@ -2,29 +2,23 @@
 
 pragma solidity 0.6.8;
 
+import "openzeppelin-solidity/contracts/access/AccessControl.sol";
 import "./IGameFactory.sol";
 import "./GameBank.sol";
 import "./IGameBank.sol";
 import "./JankenGame.sol";
 import "./GameStatus.sol";
 
-contract GameFactory is IGameFactory, JankenGame, GameStatus {
+contract GameFactory is IGameFactory, JankenGame, GameStatus, AccessControl {
+    bytes32 private constant GAME_MASTER_ROLE = keccak256("GAME_MASTER_ROLE");
     IGameBank private _gameBank;
-    uint256 private constant _minBetAmount = 5;
-    uint256 private constant _timeoutSeconds = 216000;
+    uint256 public _minBetAmount = 5;
+    uint256 public _timeoutSeconds = 216000;
     Game[] public _games;
-
-    event GameCreated(uint256 indexed gameId, address indexed host);
-    event GameJoined(
-        uint256 indexed gameId,
-        address indexed guest,
-        Hand guestHand
-    );
-    event GameRevealed(Hand hostHand);
-    event GameJudged(address indexed winner, address indexed loser);
 
     constructor(address gameBankAddress) public {
         _gameBank = IGameBank(gameBankAddress);
+        _setupRole(GAME_MASTER_ROLE, msg.sender);
     }
 
     modifier isSufficientMinimumBetAmount(uint256 betAmount) {
@@ -56,6 +50,14 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
         _;
     }
 
+    modifier isGameGuest(address guestAddress) {
+        require(
+            msg.sender == guestAddress,
+            "guest of this game is only authorized"
+        );
+        _;
+    }
+
     modifier isValidHand(
         Hand hostHand,
         bytes32 salt,
@@ -68,6 +70,43 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
             "cannot change hand or salt later out"
         );
         _;
+    }
+
+    modifier isNotTimedOut(uint256 joinedAt) {
+        require(joinedAt + _timeoutSeconds > now, "this game was timed out");
+        _;
+    }
+
+    modifier isTimedOut(uint256 joinedAt) {
+        require(
+            joinedAt + _timeoutSeconds <= now,
+            "this game was not timed out"
+        );
+        _;
+    }
+
+    modifier isGameMaster() {
+        require(
+            hasRole(GAME_MASTER_ROLE, msg.sender),
+            "Caller is not a game master"
+        );
+        _;
+    }
+
+    function changeTimeoutSeconds(uint256 timeoutSeconds)
+        external
+        override
+        isGameMaster
+    {
+        _timeoutSeconds = timeoutSeconds;
+    }
+
+    function changeMinBetAmount(uint256 minBetAmount)
+        external
+        override
+        isGameMaster
+    {
+        _minBetAmount = minBetAmount;
     }
 
     function isGameDecided(uint256 gameId)
@@ -121,6 +160,7 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
                 id: gameId,
                 betAmount: betAmount,
                 timeoutSeconds: _timeoutSeconds,
+                joinedAt: 0,
                 hostAddress: msg.sender,
                 guestAddress: address(0),
                 winner: address(0),
@@ -146,6 +186,7 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
         game.guestAddress = msg.sender;
         game.guestHand = guestHand;
         game.status = Status.Joined;
+        game.joinedAt = block.timestamp;
         _gameBank.betTokens(msg.sender, gameId, _games[gameId].betAmount);
         emit GameJoined(gameId, msg.sender, guestHand);
     }
@@ -159,11 +200,24 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
         isGameHost(_games[gameId].hostAddress)
         isStatusJoined(_games[gameId].status)
         isValidHand(hostHand, salt, _games[gameId].hostHandHashed)
+        isNotTimedOut(_games[gameId].joinedAt)
     {
         Game storage game = _games[gameId];
         game.hostHand = hostHand;
-        emit GameRevealed(hostHand);
+        emit GameRevealed(gameId, hostHand);
         judge(gameId);
+    }
+
+    function judgeTimedOutGame(uint256 gameId)
+        public
+        isGameGuest(_games[gameId].guestAddress)
+        isTimedOut(_games[gameId].joinedAt)
+    {
+        Game storage game = _games[gameId];
+        game.status = Status.Decided;
+        game.winner = game.guestAddress;
+        game.loser = game.hostAddress;
+        emit GameJudged(gameId, game.guestAddress, game.hostAddress);
     }
 
     function judge(uint256 gameId) private {
@@ -179,7 +233,7 @@ contract GameFactory is IGameFactory, JankenGame, GameStatus {
         game.status = (winner == loser ? Status.Tied : Status.Decided);
         game.winner = winner;
         game.loser = loser;
-        emit GameJudged(winner, loser);
+        emit GameJudged(gameId, winner, loser);
     }
 
     function getResult(uint256 gameId)
